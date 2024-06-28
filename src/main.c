@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 
-enum instructions {label, byte, word, org, asl, beq, inx, jmp, lda, stx};
+enum instructions {label, constant, byte, word, org, asl, beq, inx, jmp, lda, stx};
 // Note that relative addressing in assembly is identical to absolute, plus it's always the only option so it can be detected from the instruction
 enum argAddressingMode {accumulator, implied, immediate, zeroPage, zeroPageX, zeroPageY, relative, absolute, absoluteX, absoluteY, indirect, indirectX, indirectY};
 
@@ -28,6 +28,13 @@ struct number {
     uint16_t value;
     bool twoBytes;
     size_t charsRead; // TODO in parseNumber a uint8_t is usually used for this - could overflow
+};
+
+struct constant {
+    char* name;
+    bool label;
+    uint16_t value;
+    bool twoBytes;
 };
 
 struct lineArr readAsmFile(const char * const fileName) {
@@ -234,6 +241,8 @@ enum instructions identifyInstruction(const char * const text) {
             return byte;
         } else if (strcmp(".WORD", text) == 0) {
             return word;
+        } else if (strcmp(".DEF", text) == 0) {
+            return constant;
         }
 
     } else if (text[strlen(text) - 1] == ':') {
@@ -294,11 +303,11 @@ struct number parseNumber(const char * const text, const uint16_t index) {
                 if (c == '+') {
                     const struct number other = parseNumber(text + i + 1, index);
                     num += other.value;
-                    i += other.charsRead;
+                    i += other.charsRead + 1;
                 } else if (c == '-') {
                     const struct number other = parseNumber(text + i + 1, index);
                     num -= other.value;
-                    i += other.charsRead;
+                    i += other.charsRead + 1;
                 }
 
                 break;
@@ -342,11 +351,11 @@ struct number parseNumber(const char * const text, const uint16_t index) {
         if (text[i] == '+') {
             const struct number other = parseNumber(text + i + 1, index);
             num += other.value;
-            i += other.charsRead;
+            i += other.charsRead + 1;
         } else if (text[i] == '-') {
             const struct number other = parseNumber(text + i + 1, index);
             num -= other.value;
-            i += other.charsRead;
+            i += other.charsRead + 1;
         }
 
         if (twoBytes) {
@@ -380,11 +389,11 @@ struct number parseNumber(const char * const text, const uint16_t index) {
         if (text[i] == '+') {
             const struct number other = parseNumber(text + i + 1, index);
             num += other.value;
-            i += other.charsRead;
+            i += other.charsRead + 1;
         } else if (text[i] == '-') {
             const struct number other = parseNumber(text + i + 1, index);
             num -= other.value;
-            i += other.charsRead;
+            i += other.charsRead + 1;
         }
 
         if (twoBytes) {
@@ -596,6 +605,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
 bool is6502Instruction(const enum instructions instruction) {
     switch (instruction) {
         case label:
+        case constant:
         case org:
         case byte:
         case word:
@@ -623,13 +633,142 @@ int main(int argc, char** argv) {
     const struct lineArr lines = readAsmFile(argv[1]);
 
     printf("Reading labels and constants...\n");
+    
+    uint16_t index = 0x8000; // Must be defined here, not at step 3, as parseNumber() requires it
 
+    struct constant* constants = NULL;
+    size_t constantsMalloced = 0;
+    size_t constantCount = 0;
 
+    for (size_t i = 0; i < lines.len; i++) {
+        const struct line line = lines.arr[i];
+        const enum instructions instructionType = identifyInstruction(line.instruction);
+
+        if (instructionType == constant || instructionType == label) {
+            // Reserve space
+            if (constantCount == constantsMalloced) {
+                if (constantsMalloced == 0) {
+                    constantsMalloced = 1;
+                } else {
+                    constantsMalloced *= 2;
+                }
+                constants = realloc(constants, constantsMalloced * sizeof *constants);
+                if (constants == NULL) {
+                    printf("Crashed due to realloc() fail\n");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            struct constant * const constantp = &(constants[constantCount]);
+            constantCount++;
+
+            if (instructionType == constant) {
+                constantp->label = false;
+
+                if (strncmp("BYTE ", line.args, 5) == 0) {
+                    constantp->twoBytes = false;
+                } else if (strncmp("WORD ", line.args, 5) == 0) {
+                    constantp->twoBytes = true;
+                } else {
+                    printf("Must specify constant size with either BYTE or WORD: .DEF %s\n", line.args);
+                    exit(EXIT_FAILURE);
+                }
+
+                size_t offset = 5;
+                size_t nameLen = 0;
+                size_t nameMalloced = 0;
+                constantp->name = NULL;
+                while (true) {
+                    const char c = line.args[offset];
+                    offset++;
+
+                    if (c == '\0') {
+                        printf("Constant defined with no value: .DEF %s\n", line.args);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (c == ' ') {
+                        constantp->name = realloc(constantp->name, nameLen + 1);
+                        constantp->name[nameLen] = '\0';
+                        break;
+                    }
+
+                    if (!isalpha(c)) {
+                        printf("Constant names must be alphabetical: .DEF %s\n", line.args);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    // Reserve space
+                    if (nameLen == nameMalloced) {
+                        if (nameMalloced == 0) {
+                            nameMalloced = 1;
+                        } else {
+                            nameMalloced *= 2;
+                        }
+                        constantp->name = realloc(constantp->name, nameMalloced);
+                    }
+
+                    constantp->name[nameLen] = c;
+                    nameLen++;
+                }
+
+                constantp->value = parseNumber(line.args + offset, index).value;
+            } else {
+                // Note that label values will be set when found in step 3
+                constantp->label = true;
+                constantp->twoBytes = true;
+
+                size_t nameLen = 0;
+                size_t nameMalloced = 0;
+                constantp->name = NULL;
+                while (true) {
+                    const char c = line.instruction[nameLen];
+
+                    if (c == ':') {
+                        constantp->name = realloc(constantp->name, nameLen + 1);
+                        constantp->name[nameLen] = '\0';
+                        if (strcmp("LO", constantp->name) == 0) {
+                            printf("LO is an invalid label name");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (strcmp("HI", constantp->name) == 0) {
+                            printf("HI is an invalid label name");
+                            exit(EXIT_FAILURE);
+                        }
+                        break;
+                    }
+
+                    if (!isalpha(c)) {
+                        printf("Label names must be alphabetical: %s\n", line.instruction);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    // Reserve space
+                    if (nameLen == nameMalloced) {
+                        if (nameMalloced == 0) {
+                            nameMalloced = 1;
+                        } else {
+                            nameMalloced *= 2;
+                        }
+                        constantp->name = realloc(constantp->name, nameMalloced);
+                    }
+
+                    constantp->name[nameLen] = c;
+                    nameLen++;
+                }
+            }
+        }
+    }
+
+    constants = realloc(constants, constantCount * sizeof *constants);
+
+    for (int i = 0; i < constantCount; i++) {
+        printf("%s %d %d %d\n", constants[i].name, constants[i].value, constants[i].twoBytes, constants[i].label);
+    }
 
     printf("Assembling...\n");
 
     uint8_t bin[0x10000] = {0};
-    uint16_t index = 0x8000;
     bool started = false;
 
     for (size_t i = 0; i < lines.len; i++) {
@@ -673,9 +812,9 @@ int main(int argc, char** argv) {
         } else {
             size_t offset;
             switch (instruction) {
+                case constant:
                 case label:
-                printf("labels not yet supported\n");
-                exit(EXIT_FAILURE);
+                break;
 
                 case org:
                 index = parseNumber(line.args, index).value;
@@ -740,7 +879,10 @@ int main(int argc, char** argv) {
 
     printf("Resolving labels...\n");
 
-
+    for (size_t i = 0; i < constantCount; i++) {
+        free(constants[i].name);
+    }
+    free(constants);
 
     printf("Writing to file...\n");
 
