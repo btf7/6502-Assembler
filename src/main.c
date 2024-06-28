@@ -762,10 +762,6 @@ int main(int argc, char** argv) {
 
     constants = realloc(constants, constantCount * sizeof *constants);
 
-    for (int i = 0; i < constantCount; i++) {
-        printf("%s %d %d %d\n", constants[i].name, constants[i].value, constants[i].twoBytes, constants[i].label);
-    }
-
     printf("Assembling...\n");
 
     uint8_t bin[0x10000] = {0};
@@ -775,7 +771,6 @@ int main(int argc, char** argv) {
         const struct line line = lines.arr[i];
 
         const enum instructions instruction = identifyInstruction(line.instruction);
-        free(line.instruction);
 
         if (is6502Instruction(instruction)) {
             if (!started) {
@@ -813,7 +808,21 @@ int main(int argc, char** argv) {
             size_t offset;
             switch (instruction) {
                 case constant:
+                break;
+
                 case label:
+                // Set the address of the label
+                const size_t instructionLen = strlen(line.instruction);
+                char * const labelName = malloc(instructionLen);
+                strncpy(labelName, line.instruction, instructionLen - 1);
+                labelName[instructionLen - 1] = '\0';
+                for (size_t i = 0; i < constantCount; i++) {
+                    if (strcmp(labelName, constants[i].name) == 0) {
+                        constants[i].value = index;
+                        break;
+                    }
+                }
+                free(labelName);
                 break;
 
                 case org:
@@ -871,7 +880,8 @@ int main(int argc, char** argv) {
                 exit(EXIT_FAILURE);
             }
         }
-
+        
+        free(line.instruction);
         free(line.args);
     }
 
