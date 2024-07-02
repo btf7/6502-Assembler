@@ -483,7 +483,9 @@ int main(int argc, char** argv) {
                     // Find the length of the expression
                     size_t expressionLen = 0;
                     while (true) {
-                        if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                        if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
+                            expressionLen += 3;
+                        } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
                             break;
                         } else {
                             expressionLen++;
@@ -532,7 +534,9 @@ int main(int argc, char** argv) {
                     // Find the length of the expression
                     size_t expressionLen = 0;
                     while (true) {
-                        if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                        if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
+                            expressionLen += 3;
+                        } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
                             break;
                         } else {
                             expressionLen++;
@@ -622,7 +626,9 @@ int main(int argc, char** argv) {
             // Find the length of the expression
             size_t expressionLen = 0;
             while (true) {
-                if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
+                    expressionLen += 3;
+                } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
                     break;
                 } else {
                     expressionLen++;
@@ -641,7 +647,9 @@ int main(int argc, char** argv) {
             // Find the length of the expression
             size_t expressionLen = 0;
             while (true) {
-                if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
+                    expressionLen += 3;
+                } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
                     break;
                 } else {
                     expressionLen++;

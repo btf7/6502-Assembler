@@ -117,6 +117,8 @@ struct number parseExpression(const char * const text, const size_t expressionLe
     struct number num = {0, false, 0, true};
     const char* expression = text;
     int8_t sign = 1; // Either 1 or -1 depending on if there's a + or -
+    bool lo = false;
+    bool hi = false;
 
     while (expression < text + expressionLen) {
         if (sign == 0) {
@@ -127,10 +129,22 @@ struct number parseExpression(const char * const text, const size_t expressionLe
         if (isalpha(expression[0])) {
             // It's a constant
 
+            if (strncmp("LO ", expression, 3) == 0) {
+                lo = true;
+                expression += 3;
+            } else if (strncmp("HI ", expression, 3) == 0) {
+                hi = true;
+                expression += 3;
+            }
+
             // How long is it?
             size_t constantLen = 0;
             while (isalpha(expression[constantLen])) {
                 constantLen++;
+            }
+            if (constantLen == 0) {
+                printf("LO or HI used but no constant followed: %s\n", text);
+                exit(EXIT_FAILURE);
             }
 
             // Find the constant
@@ -151,8 +165,16 @@ struct number parseExpression(const char * const text, const size_t expressionLe
                 num.valueKnown = false;
             }
 
-            num.value += constants[i].value * sign;
-            num.twoBytes |= constants[i].twoBytes;
+            if (lo) {
+                num.value += (constants[i].value & 0xff) * sign;
+                lo = false;
+            } else if (hi) {
+                num.value += ((constants[i].value & 0xff00) >> 8) * sign;
+                hi = false;
+            } else {
+                num.value += constants[i].value * sign;
+                num.twoBytes |= constants[i].twoBytes;
+            }
             expression += constantLen;
         } else if (expression[0] == '*') {
             num.value += index * sign;
