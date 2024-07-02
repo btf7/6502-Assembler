@@ -381,6 +381,9 @@ int main(int argc, char** argv) {
     uint8_t bin[0x10000] = {0};
     uint16_t index = 0x8000;
     bool started = false;
+    struct unknownValueArg* unknownValueIndexes = NULL;
+    size_t unknownValueIndexesCount = 0;
+    size_t unknownValueIndexesMalloced = 0;
 
     for (size_t i = 0; i < lines.len; i++) {
         const struct line line = lines.arr[i];
@@ -398,6 +401,7 @@ int main(int argc, char** argv) {
             struct arg arg;
             if (strcmp(line.args, "") == 0) {
                 arg.addressingMode = implied;
+                arg.valueKnown = true;
             } else {
                 arg = parseArgument(line.args, index, constants, constantCount);
             }
@@ -418,7 +422,35 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            punchInstruction(instruction, arg, bin, &index);
+            if (arg.valueKnown) {
+                punchInstruction(instruction, arg, bin, &index);
+            } else {
+                if (unknownValueIndexesCount == unknownValueIndexesMalloced) {
+                    if (unknownValueIndexesMalloced == 0) {
+                        unknownValueIndexesMalloced = 1;
+                    } else {
+                        unknownValueIndexesMalloced *= 2;
+                    }
+
+                    unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
+                    unknownValueIndexes[unknownValueIndexesCount].index = index;
+                    unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
+                    unknownValueIndexesCount++;
+                    // Increment index
+                    switch (arg.addressingMode) {
+                        case absolute:
+                        case absoluteX:
+                        case absoluteY:
+                        case indirect:
+                        index += 3;
+                        break;
+
+                        default:
+                        index += 2;
+                        break;
+                    }
+                }
+            }
         } else {
             size_t offset;
             switch (instruction) {
@@ -519,7 +551,41 @@ int main(int argc, char** argv) {
         }
     }
 
+    unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesCount * sizeof *unknownValueIndexes);
+
     printf("Resolving labels...\n");
+
+    for (size_t i = 0; i < unknownValueIndexesCount; i++) {
+        const struct line line = lines.arr[unknownValueIndexes[i].lineIndex];
+        index = unknownValueIndexes[i].index;
+
+        const enum instructions instruction = identifyInstruction(line.instruction);
+
+        struct arg arg;
+        if (strcmp(line.args, "") == 0) {
+            arg.addressingMode = implied;
+        } else {
+            arg = parseArgument(line.args, index, constants, constantCount);
+        }
+
+        // Absolute and relative appear the same in assembly
+        // Branch instructions use relative and everything else uses absolute
+        // Switch from absolute to relative if it's a branch instruction
+        switch (instruction) {
+            case beq:
+            if (arg.addressingMode != absolute) {
+                printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
+                exit(EXIT_FAILURE);
+            }
+            arg.addressingMode = relative;
+            break;
+
+            default:
+            break;
+        }
+
+        punchInstruction(instruction, arg, bin, &index);
+    }
 
     for (size_t i = 0; i < lines.len; i++) {
         free(lines.arr[i].instruction);
@@ -531,6 +597,8 @@ int main(int argc, char** argv) {
         free(constants[i].name);
     }
     free(constants);
+
+    free(unknownValueIndexes);
 
     printf("Writing to file...\n");
 

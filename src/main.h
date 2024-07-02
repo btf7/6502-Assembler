@@ -37,6 +37,11 @@ struct arg {
     bool valueKnown;
 };
 
+struct unknownValueArg {
+    uint16_t index;
+    size_t lineIndex;
+};
+
 struct lineArr readAsmFile(const char* fileName);
 enum instructions identifyInstruction(const char* text);
 void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp);

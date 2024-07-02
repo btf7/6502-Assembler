@@ -149,7 +149,6 @@ struct number parseExpression(const char * const text, const size_t expressionLe
 
             if (!constants[i].valueKnown) {
                 num.valueKnown = false;
-                return num;
             }
 
             num.value += constants[i].value * sign;
