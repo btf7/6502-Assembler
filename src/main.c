@@ -1,41 +1,10 @@
+#include "main.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <stdint.h>
 #include <string.h>
-
-enum instructions {label, constant, byte, word, org, asl, beq, inx, jmp, lda, stx};
-// Note that relative addressing in assembly is identical to absolute, plus it's always the only option so it can be detected from the instruction
-enum argAddressingMode {accumulator, implied, immediate, zeroPage, zeroPageX, zeroPageY, relative, absolute, absoluteX, absoluteY, indirect, indirectX, indirectY};
-
-struct line {
-    char* instruction;
-    char* args; // All whitespace sections should be replaced with a single space
-};
-
-struct lineArr {
-    size_t len;
-    struct line* arr;
-};
-
-struct arg {
-    enum argAddressingMode addressingMode;
-    uint16_t value;
-};
-
-struct number {
-    uint16_t value;
-    bool twoBytes;
-    size_t charsRead; // TODO in parseNumber a uint8_t is usually used for this - could overflow
-};
-
-struct constant {
-    char* name;
-    bool label;
-    uint16_t value;
-    bool twoBytes;
-};
 
 struct lineArr readAsmFile(const char * const fileName) {
     FILE * const file = fopen(fileName, "r");
@@ -231,391 +200,6 @@ struct lineArr readAsmFile(const char * const fileName) {
     }
 }
 
-enum instructions identifyInstruction(const char * const text) {
-    if (text[0] == '.') {
-        // Pseudo_op
-
-        if (strcmp(".ORG", text) == 0) {
-            return org;
-        } else if (strcmp(".BYTE", text) == 0) {
-            return byte;
-        } else if (strcmp(".WORD", text) == 0) {
-            return word;
-        } else if (strcmp(".DEF", text) == 0) {
-            return constant;
-        }
-
-    } else if (text[strlen(text) - 1] == ':') {
-        // Label
-
-        return label;
-    } else {
-        // Op
-
-        if (strcmp("ASL", text) == 0) {
-            return asl;
-        } else if (strcmp("BEQ", text) == 0) {
-            return beq;
-        } else if (strcmp("INX", text) == 0) {
-            return inx;
-        } else if (strcmp("JMP", text) == 0) {
-            return jmp;
-        } else if (strcmp("LDA", text) == 0) {
-            return lda;
-        } else if (strcmp("STX", text) == 0) {
-            return stx;
-        }
-    }
-
-    printf("Invalid token: %s\n", text);
-    exit(EXIT_FAILURE);
-}
-
-uint8_t hexCharToInt(const char c) {
-    if (isdigit(c)) {
-        return c - '0';
-    } else if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    } else if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    } else {
-        return 255;
-    }
-}
-
-struct number parseNumber(const char * const text, const uint16_t index) {
-    int32_t num = 0; // Max number is uint16_t, but go bigger to detect too big numbers
-
-    if (isdigit(text[0])) {
-        // Decimal number
-        // Check 6 digits to find too big numbers
-        uint8_t i;
-        for (i = 0; i < 6; i++) {
-            const char c = text[i];
-            if (isdigit(c)) {
-                if (i == 0 && c == '0' && isdigit(text[i + 1])) {
-                    printf("Decimal number cannot start with 0: %s\n", text);
-                    exit(EXIT_FAILURE);
-                }
-                num *= 10;
-                num += c - '0';
-            } else {
-                if (c == '+') {
-                    const struct number other = parseNumber(text + i + 1, index);
-                    num += other.value;
-                    i += other.charsRead + 1;
-                } else if (c == '-') {
-                    const struct number other = parseNumber(text + i + 1, index);
-                    num -= other.value;
-                    i += other.charsRead + 1;
-                }
-
-                break;
-            }
-        }
-
-        if (num > 65535) {
-            printf("Number too big: Expected 0 - 65535, got %d: %s\n", num, text);
-            exit(EXIT_FAILURE);
-        }
-
-        if (num > 255) {
-            return (struct number){num, true, i};
-        }
-        return (struct number){num, false, i};
-    }
-
-    if (text[0] == '$') {
-        // Hex number
-        // Check 5 digits to find too big numbers
-        uint8_t i;
-        for (i = 1; i < 6; i++) {
-            const uint8_t new = hexCharToInt(text[i]);
-            
-            if (new == 255) {
-                num = num >> 4;
-                break;
-            }
-
-            num |= new;
-            num = num << 4;
-        }
-
-        if (i != 3 && i != 5) {
-            printf("Expected 2 or 4 hex digits, got %d: %s\n", i - 1, text);
-            exit(EXIT_FAILURE);
-        }
-
-        const bool twoBytes = i == 5;
-
-        if (text[i] == '+') {
-            const struct number other = parseNumber(text + i + 1, index);
-            num += other.value;
-            i += other.charsRead + 1;
-        } else if (text[i] == '-') {
-            const struct number other = parseNumber(text + i + 1, index);
-            num -= other.value;
-            i += other.charsRead + 1;
-        }
-
-        if (twoBytes) {
-            return (struct number){num, true, i};
-        }
-        return (struct number){num, false, i};
-    }
-
-    if (text[0] == '%') {
-        // Binary number
-        // Check 17 digits to find too big numbers
-        uint8_t i;
-
-        for (i = 1; i < 18; i++) {
-            if (text[i] == '1') {
-                num |= 1;
-            } else if (text[i] != '0') {
-                num = num >> 1;
-                break;
-            }
-            num = num << 1;
-        }
-
-        if (i != 9 && i != 17) {
-            printf("Expected 8 or 16 binary digits, got %d: %s\n", i - 1, text);
-            exit(EXIT_FAILURE);
-        }
-
-        const bool twoBytes = i == 17;
-
-        if (text[i] == '+') {
-            const struct number other = parseNumber(text + i + 1, index);
-            num += other.value;
-            i += other.charsRead + 1;
-        } else if (text[i] == '-') {
-            const struct number other = parseNumber(text + i + 1, index);
-            num -= other.value;
-            i += other.charsRead + 1;
-        }
-
-        if (twoBytes) {
-            return (struct number){num, true, i};
-        }
-        return (struct number){num, false, i};
-    }
-
-    if (text[0] == '*') {
-        num = index;
-
-        uint8_t charsRead = 1;
-
-        if (text[1] == '+') {
-            const struct number other = parseNumber(text + 2, index);
-            num += other.value;
-            charsRead += other.charsRead + 1;
-        } else if (text[1] == '-') {
-            const struct number other = parseNumber(text + 2, index);
-            num -= other.value;
-            charsRead += other.charsRead + 1;
-        }
-
-        return (struct number){num, true, charsRead};
-    }
-
-    printf("Invalid number in argument: %s\n", text);
-    exit(EXIT_FAILURE);
-}
-
-bool isStartOfNumber(const char c) {
-    return isdigit(c) || c == '$' || c == '%';
-}
-
-// TODO actually enforce correct syntax
-struct arg identifyArg(const char * const text, const uint16_t index) {
-    struct arg arg;
-
-    if (strcmp("A", text) == 0) {
-        arg.addressingMode = accumulator;
-        return arg;
-    }
-
-    if (text[0] == '#') {
-        arg.addressingMode = immediate;
-
-        if (isStartOfNumber(text[1])) {
-            const struct number number = parseNumber(text + 1, index);
-            arg.value = number.value;
-            if (number.twoBytes) {
-                printf("Expected 1 byte number, recieved 2 byte number: %s\n", text);
-                exit(EXIT_FAILURE);
-            }
-            return arg;
-        }
-
-        printf("Labels not supported / syntax error: %s\n", text);
-        exit(EXIT_FAILURE);
-    }
-
-    const size_t len = strlen(text);
-
-    if (text[0] == '(') {
-        if (isStartOfNumber(text[1])) {
-            const struct number number = parseNumber(text + 1, index);
-            arg.value = number.value;
-            if (number.twoBytes) {
-                arg.addressingMode = indirect;
-            } else if (text[len - 1] == ')') {
-                arg.addressingMode = indirectX;
-            } else {
-                arg.addressingMode = indirectY;
-            }
-            return arg;
-        }
-
-        printf("Labels not supported / syntax error: %s\n", text);
-        exit(EXIT_FAILURE);
-    }
-
-    const struct number number = parseNumber(text, index);
-    arg.value = number.value;
-
-    if (number.twoBytes) {
-        if (text[len - 2] == ',') {
-            if (text[len - 1] == 'X') {
-                arg.addressingMode = absoluteX;
-            } else {
-                arg.addressingMode = absoluteY;
-            }
-        } else {
-            arg.addressingMode = absolute;
-        }
-        return arg;
-    } else {
-        if (text[len - 2] == ',') {
-            if (text[len - 1] == 'X') {
-                arg.addressingMode = zeroPageX;
-            } else {
-                arg.addressingMode = zeroPageY;
-            }
-        } else {
-            arg.addressingMode = zeroPage;
-        }
-        return arg;
-    }
-}
-
-void punchInstruction(const enum instructions instruction, const struct arg arg, uint8_t * const bin, uint16_t * const indexp) {
-    switch (instruction) {
-        case asl:
-        switch (arg.addressingMode) {
-            case accumulator: bin[*indexp] = 0x0a; break;
-            case zeroPage: bin[*indexp] = 0x06; break;
-            case zeroPageX: bin[*indexp] = 0x16; break;
-            case absolute: bin[*indexp] = 0x0e; break;
-            case absoluteX: bin[*indexp] = 0x1e; break;
-            default:
-            printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
-            exit(EXIT_FAILURE);
-        }
-        break;
-        
-        case beq:
-        bin[*indexp] = 0xf0;
-        break;
-
-        case inx:
-        bin[*indexp] = 0xe8;
-        break;
-
-        case jmp:
-        switch (arg.addressingMode) {
-            case absolute: bin[*indexp] = 0x4c; break;
-            case indirect: bin[*indexp] = 0x6c; break;
-            default:
-            printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
-            exit(EXIT_FAILURE);
-        }
-        break;
-
-        case lda:
-        switch (arg.addressingMode) {
-            case immediate: bin[*indexp] = 0xa9; break;
-            case zeroPage: bin[*indexp] = 0xa5; break;
-            case zeroPageX: bin[*indexp] = 0xb5; break;
-            case absolute: bin[*indexp] = 0xad; break;
-            case absoluteX: bin[*indexp] = 0xbd; break;
-            case absoluteY: bin[*indexp] = 0xb9; break;
-            case indirectX: bin[*indexp] = 0xa1; break;
-            case indirectY: bin[*indexp] = 0xb1; break;
-            default:
-            printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
-            exit(EXIT_FAILURE);
-        }
-        break;
-
-        case stx:
-        switch (arg.addressingMode) {
-            case zeroPage: bin[*indexp] = 0x86; break;
-            case zeroPageY: bin[*indexp] = 0x96; break;
-            case absolute: bin[*indexp] = 0x8e; break;
-            default:
-            printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
-            exit(EXIT_FAILURE);
-        }
-        break;
-
-        default:
-        printf("Couldn't identify instruction to punch: instruction=%d arg.addressingMode=%d arg.value=%d\n", instruction, arg.addressingMode, arg.value);
-        exit(EXIT_FAILURE);
-    }
-    (*indexp)++;
-
-    switch (arg.addressingMode) {
-        case accumulator:
-        case implied:
-        break;
-
-        case absolute:
-        case absoluteX:
-        case absoluteY:
-        case indirect:
-        // Value should be punched in little endian
-        bin[*indexp] = (uint8_t)(arg.value & 0xff);
-        (*indexp)++;
-        bin[*indexp] = (uint8_t)((arg.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
-        (*indexp)++;
-        break;
-
-        case relative:
-        (*indexp)++;
-        int32_t dist = arg.value - *indexp;
-        if (dist < -126 || dist > 129) {
-            printf("Branch distance too far: Must be -126 to +129, given %d: Branch from 0x%x to 0x%x\n", dist, *indexp, arg.value);
-            exit(EXIT_FAILURE);
-        }
-        bin[*indexp - 1] = (int8_t)dist;
-        break;
-
-        default:
-        bin[*indexp] = (uint8_t)arg.value;
-        (*indexp)++;
-        break;
-    }
-}
-
-// Return false if it's a label or pseudo op, true if it's an actual 6502 instruction
-bool is6502Instruction(const enum instructions instruction) {
-    switch (instruction) {
-        case label:
-        case constant:
-        case org:
-        case byte:
-        case word:
-        return false;
-
-        default:
-        return true;
-    }
-}
-
 int main(int argc, char** argv) {
     // Step 1: Read file
     // Step 2: Go through file once, getting all label names and defining constants
@@ -633,8 +217,6 @@ int main(int argc, char** argv) {
     const struct lineArr lines = readAsmFile(argv[1]);
 
     printf("Reading labels and constants...\n");
-    
-    uint16_t index = 0x8000; // Must be defined here, not at step 3, as parseNumber() requires it
 
     struct constant* constants = NULL;
     size_t constantsMalloced = 0;
@@ -663,7 +245,7 @@ int main(int argc, char** argv) {
             constantCount++;
 
             if (instructionType == constant) {
-                constantp->label = false;
+                constantp->valueKnown = true;
 
                 if (strncmp("BYTE ", line.args, 5) == 0) {
                     constantp->twoBytes = false;
@@ -688,8 +270,24 @@ int main(int argc, char** argv) {
                     }
 
                     if (c == ' ') {
+                        if (nameLen == 0) {
+                            printf("Constant defined with no name: .DEF %s\n", line.args);
+                            exit(EXIT_FAILURE);
+                        }
                         constantp->name = realloc(constantp->name, nameLen + 1);
                         constantp->name[nameLen] = '\0';
+                        if (strcmp("LO", constantp->name) == 0) {
+                            printf("LO is an invalid constant name");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (strcmp("HI", constantp->name) == 0) {
+                            printf("HI is an invalid constant name");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (strcmp("A", constantp->name) == 0) {
+                            printf("A is an invalid constant name");
+                            exit(EXIT_FAILURE);
+                        }
                         break;
                     }
 
@@ -712,10 +310,22 @@ int main(int argc, char** argv) {
                     nameLen++;
                 }
 
-                constantp->value = parseNumber(line.args + offset, index).value;
+                // Pass 0 for index so it's effectively ignored
+                const struct number num = parseExpression(line.args + offset, strlen(line.args) - offset, 0, constants, constantCount);
+
+                if (!num.valueKnown) {
+                    printf("Constants cannot be defined by labels: .DEF %s\n", line.args);
+                    exit(EXIT_FAILURE);
+                }
+
+                if (constantp->twoBytes) {
+                    constantp->value = num.value;
+                } else {
+                    constantp->value = num.value & 0xff;
+                }
             } else {
                 // Note that label values will be set when found in step 3
-                constantp->label = true;
+                constantp->valueKnown = false;
                 constantp->twoBytes = true;
 
                 size_t nameLen = 0;
@@ -733,6 +343,10 @@ int main(int argc, char** argv) {
                         }
                         if (strcmp("HI", constantp->name) == 0) {
                             printf("HI is an invalid label name");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (strcmp("A", constantp->name) == 0) {
+                            printf("A is an invalid label name");
                             exit(EXIT_FAILURE);
                         }
                         break;
@@ -765,6 +379,7 @@ int main(int argc, char** argv) {
     printf("Assembling...\n");
 
     uint8_t bin[0x10000] = {0};
+    uint16_t index = 0x8000;
     bool started = false;
 
     for (size_t i = 0; i < lines.len; i++) {
@@ -784,7 +399,7 @@ int main(int argc, char** argv) {
             if (strcmp(line.args, "") == 0) {
                 arg.addressingMode = implied;
             } else {
-                arg = identifyArg(line.args, index);
+                arg = parseArgument(line.args, index, constants, constantCount);
             }
 
             // Absolute and relative appear the same in assembly
@@ -812,6 +427,7 @@ int main(int argc, char** argv) {
 
                 case label:
                 // Set the address of the label
+                // Don't have to check if the label exists as this is its definition, it would have been read in step 2
                 const size_t instructionLen = strlen(line.instruction);
                 char * const labelName = malloc(instructionLen);
                 strncpy(labelName, line.instruction, instructionLen - 1);
@@ -819,6 +435,7 @@ int main(int argc, char** argv) {
                 for (size_t i = 0; i < constantCount; i++) {
                     if (strcmp(labelName, constants[i].name) == 0) {
                         constants[i].value = index;
+                        constants[i].valueKnown = true;
                         break;
                     }
                 }
@@ -826,13 +443,23 @@ int main(int argc, char** argv) {
                 break;
 
                 case org:
-                index = parseNumber(line.args, index).value;
+                index = parseNumber(line.args).value;
                 break;
 
                 case byte:
                 offset = 0;
                 while (true) {
-                    const struct number num = parseNumber(line.args + offset, index);
+                    // Find the length of the expression
+                    size_t expressionLen = 0;
+                    while (true) {
+                        if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                            break;
+                        } else {
+                            expressionLen++;
+                        }
+                    }
+
+                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
                     if (num.twoBytes) {
                         printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
                         exit(EXIT_FAILURE);
@@ -840,7 +467,7 @@ int main(int argc, char** argv) {
                     bin[index] = (uint8_t)num.value;
                     index++;
 
-                    offset += num.charsRead;
+                    offset += expressionLen;
                     if (line.args[offset] == ' ') {
                         offset++;
                         continue;
@@ -856,13 +483,23 @@ int main(int argc, char** argv) {
                 case word:
                 offset = 0;
                 while (true) {
-                    const struct number num = parseNumber(line.args + offset, index);
+                    // Find the length of the expression
+                    size_t expressionLen = 0;
+                    while (true) {
+                        if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                            break;
+                        } else {
+                            expressionLen++;
+                        }
+                    }
+
+                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
                     bin[index] = (uint8_t)(num.value & 0xff);
                     index++;
                     bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
                     index++;
 
-                    offset += num.charsRead;
+                    offset += expressionLen;
                     if (line.args[offset] == ' ') {
                         offset++;
                         continue;
@@ -880,14 +517,15 @@ int main(int argc, char** argv) {
                 exit(EXIT_FAILURE);
             }
         }
-        
-        free(line.instruction);
-        free(line.args);
     }
 
-    free(lines.arr);
-
     printf("Resolving labels...\n");
+
+    for (size_t i = 0; i < lines.len; i++) {
+        free(lines.arr[i].instruction);
+        free(lines.arr[i].args);
+    }
+    free(lines.arr);
 
     for (size_t i = 0; i < constantCount; i++) {
         free(constants[i].name);
