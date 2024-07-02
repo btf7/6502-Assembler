@@ -681,11 +681,23 @@ int main(int argc, char** argv) {
 
     printf("Writing to file...\n");
 
-    FILE * const outFile = fopen("out.6502", "wb");
+    char* fileName;
+    if (argc == 2) {
+        // No file name was given
+        fileName = malloc(strlen(argv[1]) + 6);
+        strcpy(fileName, argv[1]);
+        strcpy(fileName + strlen(argv[1]), ".6502");
+    } else {
+        fileName = malloc(strlen(argv[2]) + 1);
+        strcpy(fileName, argv[2]);
+    }
+
+    FILE * const outFile = fopen(fileName, "wb");
     if (outFile == NULL) {
         printf("Couldn't create output file\n");
         exit(EXIT_FAILURE);
     }
+    free(fileName);
 
     for (uint32_t i = 0; i < 0x10000; i++) {
         if (putc(bin[i], outFile) == EOF) {
