@@ -104,7 +104,7 @@ struct number parseNumber(const char * const text) {
         return (struct number){num, false, i};
     }
 
-    printf("Invalid number in argument: %s\n", text);
+    printf("Failed to parse number: %s\n", text);
     exit(EXIT_FAILURE);
 }
 
@@ -115,7 +115,7 @@ struct number parseExpression(const char * const text, const size_t expressionLe
     }
 
     struct number num = {0, false, 0, true};
-    const char * expression = text;
+    const char* expression = text;
     int8_t sign = 1; // Either 1 or -1 depending on if there's a + or -
 
     while (expression < text + expressionLen) {

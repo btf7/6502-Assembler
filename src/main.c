@@ -431,24 +431,23 @@ int main(int argc, char** argv) {
                     } else {
                         unknownValueIndexesMalloced *= 2;
                     }
-
                     unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
-                    unknownValueIndexes[unknownValueIndexesCount].index = index;
-                    unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
-                    unknownValueIndexesCount++;
-                    // Increment index
-                    switch (arg.addressingMode) {
-                        case absolute:
-                        case absoluteX:
-                        case absoluteY:
-                        case indirect:
-                        index += 3;
-                        break;
+                }
+                unknownValueIndexes[unknownValueIndexesCount].index = index;
+                unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
+                unknownValueIndexesCount++;
+                // Increment index
+                switch (arg.addressingMode) {
+                    case absolute:
+                    case absoluteX:
+                    case absoluteY:
+                    case indirect:
+                    index += 3;
+                    break;
 
-                        default:
-                        index += 2;
-                        break;
-                    }
+                    default:
+                    index += 2;
+                    break;
                 }
             }
         } else {
@@ -492,11 +491,26 @@ int main(int argc, char** argv) {
                     }
 
                     const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
-                    if (num.twoBytes) {
-                        printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
-                        exit(EXIT_FAILURE);
+                    if (num.valueKnown) {
+                        if (num.twoBytes) {
+                            printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
+                            exit(EXIT_FAILURE);
+                        }
+                        bin[index] = (uint8_t)num.value;
+                    } else {
+                        if (unknownValueIndexesCount == unknownValueIndexesMalloced) {
+                            if (unknownValueIndexesMalloced == 0) {
+                                unknownValueIndexesMalloced = 1;
+                            } else {
+                                unknownValueIndexesMalloced *= 2;
+                            }
+                            unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
+                        }
+                        unknownValueIndexes[unknownValueIndexesCount].index = index;
+                        unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
+                        unknownValueIndexes[unknownValueIndexesCount].offset = offset;
+                        unknownValueIndexesCount++;
                     }
-                    bin[index] = (uint8_t)num.value;
                     index++;
 
                     offset += expressionLen;
@@ -526,10 +540,26 @@ int main(int argc, char** argv) {
                     }
 
                     const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
-                    bin[index] = (uint8_t)(num.value & 0xff);
-                    index++;
-                    bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
-                    index++;
+                    if (num.valueKnown) {
+                        bin[index] = (uint8_t)(num.value & 0xff);
+                        index++;
+                        bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
+                        index++;
+                    } else {
+                        if (unknownValueIndexesCount == unknownValueIndexesMalloced) {
+                            if (unknownValueIndexesMalloced == 0) {
+                                unknownValueIndexesMalloced = 1;
+                            } else {
+                                unknownValueIndexesMalloced *= 2;
+                            }
+                            unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
+                        }
+                        unknownValueIndexes[unknownValueIndexesCount].index = index;
+                        unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
+                        unknownValueIndexes[unknownValueIndexesCount].offset = offset;
+                        unknownValueIndexesCount++;
+                        index += 2;
+                    }
 
                     offset += expressionLen;
                     if (line.args[offset] == ' ') {
@@ -561,30 +591,71 @@ int main(int argc, char** argv) {
 
         const enum instructions instruction = identifyInstruction(line.instruction);
 
-        struct arg arg;
-        if (strcmp(line.args, "") == 0) {
-            arg.addressingMode = implied;
-        } else {
-            arg = parseArgument(line.args, index, constants, constantCount);
-        }
+        if (is6502Instruction(instruction)) {
+            struct arg arg;
+            if (strcmp(line.args, "") == 0) {
+                arg.addressingMode = implied;
+            } else {
+                arg = parseArgument(line.args, index, constants, constantCount);
+            }
 
-        // Absolute and relative appear the same in assembly
-        // Branch instructions use relative and everything else uses absolute
-        // Switch from absolute to relative if it's a branch instruction
-        switch (instruction) {
-            case beq:
-            if (arg.addressingMode != absolute) {
-                printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
+            // Absolute and relative appear the same in assembly
+            // Branch instructions use relative and everything else uses absolute
+            // Switch from absolute to relative if it's a branch instruction
+            switch (instruction) {
+                case beq:
+                if (arg.addressingMode != absolute) {
+                    printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
+                    exit(EXIT_FAILURE);
+                }
+                arg.addressingMode = relative;
+                break;
+
+                default:
+                break;
+            }
+
+            punchInstruction(instruction, arg, bin, &index);
+        } else if (instruction == byte) {
+            const size_t offset = unknownValueIndexes[i].offset;
+
+            // Find the length of the expression
+            size_t expressionLen = 0;
+            while (true) {
+                if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                    break;
+                } else {
+                    expressionLen++;
+                }
+            }
+
+            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
+            if (num.twoBytes) {
+                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
                 exit(EXIT_FAILURE);
             }
-            arg.addressingMode = relative;
-            break;
+            bin[index] = (uint8_t)num.value;
+        } else if (instruction == word) {
+            const size_t offset = unknownValueIndexes[i].offset;
 
-            default:
-            break;
+            // Find the length of the expression
+            size_t expressionLen = 0;
+            while (true) {
+                if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
+                    break;
+                } else {
+                    expressionLen++;
+                }
+            }
+
+            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
+            bin[index] = (uint8_t)(num.value & 0xff);
+            index++;
+            bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
+        } else {
+            printf("Unknown value in unexpected instruction (%d)\n", instruction);
+            exit(EXIT_FAILURE);
         }
-
-        punchInstruction(instruction, arg, bin, &index);
     }
 
     for (size_t i = 0; i < lines.len; i++) {

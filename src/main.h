@@ -40,6 +40,7 @@ struct arg {
 struct unknownValueArg {
     uint16_t index;
     size_t lineIndex;
+    size_t offset;
 };
 
 struct lineArr readAsmFile(const char* fileName);
