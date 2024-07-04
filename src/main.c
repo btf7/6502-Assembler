@@ -410,7 +410,14 @@ int main(int argc, char** argv) {
             // Branch instructions use relative and everything else uses absolute
             // Switch from absolute to relative if it's a branch instruction
             switch (instruction) {
+                case bcc:
+                case bcs:
                 case beq:
+                case bmi:
+                case bne:
+                case bpl:
+                case bvc:
+                case bvs:
                 if (arg.addressingMode != absolute) {
                     printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
                     exit(EXIT_FAILURE);

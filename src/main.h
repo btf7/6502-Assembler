@@ -3,7 +3,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-enum instructions {label, constant, byte, word, org, asl, beq, inx, jmp, lda, stx};
+enum instructions {label, constant, byte, word, org,
+                   adc, and, asl, bcc, bcs, beq, bit, bmi, bne, bpl, brk, bvc, bvs, clc,
+                   cld, cli, clv, cmp, cpx, cpy, dec, dex, dey, eor, inc, inx, iny, jmp,
+                   jsr, lda, ldx, ldy, lsr, nop, ora, pha, php, pla, plp, rol, ror, rti,
+                   rts, sbc, sec, sed, sei, sta, stx, sty, tax, tay, tsx, txa, txs, tya};
 // Note that relative addressing in assembly is identical to absolute, plus it's always the only option so it can be detected from the instruction
 enum argAddressingMode {accumulator, implied, immediate, zeroPage, zeroPageX, zeroPageY, relative, absolute, absoluteX, absoluteY, indirect, indirectX, indirectY};
 
