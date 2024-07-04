@@ -113,7 +113,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                     linep->args[strLen] = ' ';
                     strLen++;
                 }
-            } else {
+            } else if (linep != NULL) {
                 linep->instruction = realloc(linep->instruction, strLen + 1);
                 if (linep->instruction == NULL) {
                     printf("Crashed due to realloc() fail\n");

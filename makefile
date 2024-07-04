@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c17 -g3 -Wall -O0
+CFLAGS = -std=c17 -g3 -Wall -Og
 CFILES = src/main.c src/instructions.c src/parsing.c
 
 Assembler: $(CFILES)
