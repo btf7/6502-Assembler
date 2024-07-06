@@ -59,5 +59,5 @@ void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bi
 bool is6502Instruction(enum instructions instruction);
 uint8_t hexCharToInt(char c);
 struct number parseNumber(const char* text);
-struct number parseExpression(const char* text, size_t expressionLen, uint16_t index, const struct constantArr constants);
-struct arg parseArgument(const char* text, uint16_t index, const struct constantArr constants);
+struct number parseExpression(const char* text, size_t expressionLen, uint16_t index, struct constantArr constants);
+struct arg parseArgument(const char* text, uint16_t index, struct constantArr constants);
