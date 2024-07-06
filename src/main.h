@@ -59,6 +59,7 @@ struct unknownValueArgArr {
 
 struct lineArr readAsmFile(const char* fileName);
 struct constantArr readConstants(struct lineArr lines);
+void assemble(struct lineArr lines, struct constantArr constants, uint8_t* bin, struct unknownValueArgArr* unknownValueArgs);
 enum instructions identifyInstruction(const char* text);
 void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp);
 bool is6502Instruction(enum instructions instruction);
