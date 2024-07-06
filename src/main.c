@@ -360,33 +360,9 @@ struct constantArr readConstants(const struct lineArr lines) {
     return constants;
 }
 
-int main(int argc, char** argv) {
-    // Step 1: Read file
-    // Step 2: Go through file once, getting all label names and defining constants
-    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
-    // Step 4: Go through all instructions where labels are used and punch in the correct value
-    // Step 5: Write bin to file
-
-    if (argc == 1) {
-        printf("No assembly file given\n");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Reading from file...\n");
-
-    const struct lineArr lines = readAsmFile(argv[1]);
-
-    printf("Reading labels and constants...\n");
-
-    struct constantArr constants = readConstants(lines);
-
-    printf("Assembling...\n");
-
-    uint8_t bin[0x10000] = {0};
+void assemble(const struct lineArr lines, const struct constantArr constants, uint8_t * const bin, struct unknownValueArgArr * const unknownValueArgs) {
     uint16_t index = 0x8000;
     bool started = false;
-    struct unknownValueArg* unknownValueIndexes = NULL;
-    size_t unknownValueIndexesCount = 0;
     size_t unknownValueIndexesMalloced = 0;
 
     for (size_t i = 0; i < lines.len; i++) {
@@ -436,17 +412,17 @@ int main(int argc, char** argv) {
             if (arg.valueKnown) {
                 punchInstruction(instruction, arg, bin, &index);
             } else {
-                if (unknownValueIndexesCount == unknownValueIndexesMalloced) {
+                if (unknownValueArgs->len == unknownValueIndexesMalloced) {
                     if (unknownValueIndexesMalloced == 0) {
                         unknownValueIndexesMalloced = 1;
                     } else {
                         unknownValueIndexesMalloced *= 2;
                     }
-                    unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
+                    unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
                 }
-                unknownValueIndexes[unknownValueIndexesCount].index = index;
-                unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
-                unknownValueIndexesCount++;
+                unknownValueArgs->arr[unknownValueArgs->len].index = index;
+                unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
+                unknownValueArgs->len++;
                 // Increment index
                 switch (arg.addressingMode) {
                     case absolute:
@@ -511,18 +487,18 @@ int main(int argc, char** argv) {
                         }
                         bin[index] = (uint8_t)num.value;
                     } else {
-                        if (unknownValueIndexesCount == unknownValueIndexesMalloced) {
+                        if (unknownValueArgs->len == unknownValueIndexesMalloced) {
                             if (unknownValueIndexesMalloced == 0) {
                                 unknownValueIndexesMalloced = 1;
                             } else {
                                 unknownValueIndexesMalloced *= 2;
                             }
-                            unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
+                            unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
                         }
-                        unknownValueIndexes[unknownValueIndexesCount].index = index;
-                        unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
-                        unknownValueIndexes[unknownValueIndexesCount].offset = offset;
-                        unknownValueIndexesCount++;
+                        unknownValueArgs->arr[unknownValueArgs->len].index = index;
+                        unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
+                        unknownValueArgs->arr[unknownValueArgs->len].offset = offset;
+                        unknownValueArgs->len++;
                     }
                     index++;
 
@@ -561,18 +537,18 @@ int main(int argc, char** argv) {
                         bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
                         index++;
                     } else {
-                        if (unknownValueIndexesCount == unknownValueIndexesMalloced) {
+                        if (unknownValueArgs->len == unknownValueIndexesMalloced) {
                             if (unknownValueIndexesMalloced == 0) {
                                 unknownValueIndexesMalloced = 1;
                             } else {
                                 unknownValueIndexesMalloced *= 2;
                             }
-                            unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesMalloced * sizeof *unknownValueIndexes);
+                            unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
                         }
-                        unknownValueIndexes[unknownValueIndexesCount].index = index;
-                        unknownValueIndexes[unknownValueIndexesCount].lineIndex = i;
-                        unknownValueIndexes[unknownValueIndexesCount].offset = offset;
-                        unknownValueIndexesCount++;
+                        unknownValueArgs->arr[unknownValueArgs->len].index = index;
+                        unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
+                        unknownValueArgs->arr[unknownValueArgs->len].offset = offset;
+                        unknownValueArgs->len++;
                         index += 2;
                     }
 
@@ -596,13 +572,40 @@ int main(int argc, char** argv) {
         }
     }
 
-    unknownValueIndexes = realloc(unknownValueIndexes, unknownValueIndexesCount * sizeof *unknownValueIndexes);
+    unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueArgs->len * sizeof *unknownValueArgs->arr);
+}
+
+int main(int argc, char** argv) {
+    // Step 1: Read file
+    // Step 2: Go through file once, getting all label names and defining constants
+    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
+    // Step 4: Go through all instructions where labels are used and punch in the correct value
+    // Step 5: Write bin to file
+
+    if (argc == 1) {
+        printf("No assembly file given\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Reading from file...\n");
+
+    const struct lineArr lines = readAsmFile(argv[1]);
+
+    printf("Reading labels and constants...\n");
+
+    const struct constantArr constants = readConstants(lines);
+
+    printf("Assembling...\n");
+
+    uint8_t bin[0x10000] = {0};
+    struct unknownValueArgArr unknownValueArgs = {0, NULL};
+    assemble(lines, constants, bin, &unknownValueArgs);
 
     printf("Resolving labels...\n");
 
-    for (size_t i = 0; i < unknownValueIndexesCount; i++) {
-        const struct line line = lines.arr[unknownValueIndexes[i].lineIndex];
-        index = unknownValueIndexes[i].index;
+    for (size_t i = 0; i < unknownValueArgs.len; i++) {
+        const struct line line = lines.arr[unknownValueArgs.arr[i].lineIndex];
+        uint16_t index = unknownValueArgs.arr[i].index;
 
         const enum instructions instruction = identifyInstruction(line.instruction);
 
@@ -632,7 +635,7 @@ int main(int argc, char** argv) {
 
             punchInstruction(instruction, arg, bin, &index);
         } else if (instruction == byte) {
-            const size_t offset = unknownValueIndexes[i].offset;
+            const size_t offset = unknownValueArgs.arr[i].offset;
 
             // Find the length of the expression
             size_t expressionLen = 0;
@@ -653,7 +656,7 @@ int main(int argc, char** argv) {
             }
             bin[index] = (uint8_t)num.value;
         } else if (instruction == word) {
-            const size_t offset = unknownValueIndexes[i].offset;
+            const size_t offset = unknownValueArgs.arr[i].offset;
 
             // Find the length of the expression
             size_t expressionLen = 0;
@@ -688,7 +691,7 @@ int main(int argc, char** argv) {
     }
     free(constants.arr);
 
-    free(unknownValueIndexes);
+    free(unknownValueArgs.arr);
 
     printf("Writing to file...\n");
 

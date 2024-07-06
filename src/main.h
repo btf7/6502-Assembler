@@ -52,6 +52,11 @@ struct unknownValueArg {
     size_t offset;
 };
 
+struct unknownValueArgArr {
+    size_t len;
+    struct unknownValueArg* arr;
+};
+
 struct lineArr readAsmFile(const char* fileName);
 struct constantArr readConstants(struct lineArr lines);
 enum instructions identifyInstruction(const char* text);
