@@ -108,7 +108,7 @@ struct number parseNumber(const char * const text) {
     exit(EXIT_FAILURE);
 }
 
-struct number parseExpression(const char * const text, const size_t expressionLen, const uint16_t index, const struct constant * const constants, const size_t constantCount) {
+struct number parseExpression(const char * const text, const size_t expressionLen, const uint16_t index, const struct constantArr constants) {
     if (expressionLen == 0) {
         printf("No expression to evaluate: %s\n", text);
         exit(EXIT_FAILURE);
@@ -150,8 +150,8 @@ struct number parseExpression(const char * const text, const size_t expressionLe
             // Find the constant
             bool constantDefined = false;
             size_t i;
-            for (i = 0; i < constantCount; i++) {
-                if (strncmp(expression, constants[i].name, constantLen) == 0) {
+            for (i = 0; i < constants.len; i++) {
+                if (strncmp(expression, constants.arr[i].name, constantLen) == 0) {
                     constantDefined = true;
                     break;
                 }
@@ -161,19 +161,19 @@ struct number parseExpression(const char * const text, const size_t expressionLe
                 exit(EXIT_FAILURE);
             }
 
-            if (!constants[i].valueKnown) {
+            if (!constants.arr[i].valueKnown) {
                 num.valueKnown = false;
             }
 
             if (lo) {
-                num.value += (constants[i].value & 0xff) * sign;
+                num.value += (constants.arr[i].value & 0xff) * sign;
                 lo = false;
             } else if (hi) {
-                num.value += ((constants[i].value & 0xff00) >> 8) * sign;
+                num.value += ((constants.arr[i].value & 0xff00) >> 8) * sign;
                 hi = false;
             } else {
-                num.value += constants[i].value * sign;
-                num.twoBytes |= constants[i].twoBytes;
+                num.value += constants.arr[i].value * sign;
+                num.twoBytes |= constants.arr[i].twoBytes;
             }
             expression += constantLen;
         } else if (expression[0] == '*') {
@@ -211,7 +211,7 @@ struct number parseExpression(const char * const text, const size_t expressionLe
     return num;
 }
 
-struct arg parseArgument(const char * const text, const uint16_t index, const struct constant * const constants, const size_t constantCount) {
+struct arg parseArgument(const char * const text, const uint16_t index, const struct constantArr constants) {
     struct arg arg;
     arg.valueKnown = true;
 
@@ -259,7 +259,7 @@ struct arg parseArgument(const char * const text, const uint16_t index, const st
         arg.addressingMode = zeroPage;
     }
 
-    const struct number num = parseExpression(text + expressionStartOffset, expressionLen, index, constants, constantCount);
+    const struct number num = parseExpression(text + expressionStartOffset, expressionLen, index, constants);
     arg.value = num.value;
     arg.valueKnown = num.valueKnown;
 

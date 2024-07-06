@@ -31,8 +31,13 @@ struct number {
 struct constant {
     char* name;
     bool valueKnown;
-    uint16_t value;
     bool twoBytes;
+    uint16_t value;
+};
+
+struct constantArr {
+    size_t len;
+    struct constant* arr;
 };
 
 struct arg {
@@ -48,10 +53,11 @@ struct unknownValueArg {
 };
 
 struct lineArr readAsmFile(const char* fileName);
+struct constantArr readConstants(struct lineArr lines);
 enum instructions identifyInstruction(const char* text);
 void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp);
 bool is6502Instruction(enum instructions instruction);
 uint8_t hexCharToInt(char c);
 struct number parseNumber(const char* text);
-struct number parseExpression(const char* text, size_t expressionLen, uint16_t index, const struct constant* constants, size_t constantCount);
-struct arg parseArgument(const char* text, uint16_t index, const struct constant* constants, size_t constantCount);
+struct number parseExpression(const char* text, size_t expressionLen, uint16_t index, const struct constantArr constants);
+struct arg parseArgument(const char* text, uint16_t index, const struct constantArr constants);

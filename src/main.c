@@ -200,27 +200,9 @@ struct lineArr readAsmFile(const char * const fileName) {
     }
 }
 
-int main(int argc, char** argv) {
-    // Step 1: Read file
-    // Step 2: Go through file once, getting all label names and defining constants
-    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
-    // Step 4: Go through all instructions where labels are used and punch in the correct value
-    // Step 5: Write bin to file
-
-    if (argc == 1) {
-        printf("No assembly file given\n");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Reading from file...\n");
-
-    const struct lineArr lines = readAsmFile(argv[1]);
-
-    printf("Reading labels and constants...\n");
-
-    struct constant* constants = NULL;
+struct constantArr readConstants(const struct lineArr lines) {
+    struct constantArr constants = {0, NULL};
     size_t constantsMalloced = 0;
-    size_t constantCount = 0;
 
     for (size_t i = 0; i < lines.len; i++) {
         const struct line line = lines.arr[i];
@@ -228,21 +210,21 @@ int main(int argc, char** argv) {
 
         if (instructionType == constant || instructionType == label) {
             // Reserve space
-            if (constantCount == constantsMalloced) {
+            if (constants.len == constantsMalloced) {
                 if (constantsMalloced == 0) {
                     constantsMalloced = 1;
                 } else {
                     constantsMalloced *= 2;
                 }
-                constants = realloc(constants, constantsMalloced * sizeof *constants);
-                if (constants == NULL) {
+                constants.arr = realloc(constants.arr, constantsMalloced * sizeof *constants.arr);
+                if (constants.arr == NULL) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
             }
 
-            struct constant * const constantp = &(constants[constantCount]);
-            constantCount++;
+            struct constant * const constantp = &(constants.arr[constants.len]);
+            constants.len++;
 
             if (instructionType == constant) {
                 constantp->valueKnown = true;
@@ -311,7 +293,7 @@ int main(int argc, char** argv) {
                 }
 
                 // Pass 0 for index so it's effectively ignored
-                const struct number num = parseExpression(line.args + offset, strlen(line.args) - offset, 0, constants, constantCount);
+                const struct number num = parseExpression(line.args + offset, strlen(line.args) - offset, 0, constants);
 
                 if (!num.valueKnown) {
                     printf("Constants cannot be defined by labels: .DEF %s\n", line.args);
@@ -374,7 +356,29 @@ int main(int argc, char** argv) {
         }
     }
 
-    constants = realloc(constants, constantCount * sizeof *constants);
+    constants.arr = realloc(constants.arr, constants.len * sizeof *constants.arr);
+    return constants;
+}
+
+int main(int argc, char** argv) {
+    // Step 1: Read file
+    // Step 2: Go through file once, getting all label names and defining constants
+    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
+    // Step 4: Go through all instructions where labels are used and punch in the correct value
+    // Step 5: Write bin to file
+
+    if (argc == 1) {
+        printf("No assembly file given\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Reading from file...\n");
+
+    const struct lineArr lines = readAsmFile(argv[1]);
+
+    printf("Reading labels and constants...\n");
+
+    struct constantArr constants = readConstants(lines);
 
     printf("Assembling...\n");
 
@@ -403,7 +407,7 @@ int main(int argc, char** argv) {
                 arg.addressingMode = implied;
                 arg.valueKnown = true;
             } else {
-                arg = parseArgument(line.args, index, constants, constantCount);
+                arg = parseArgument(line.args, index, constants);
             }
 
             // Absolute and relative appear the same in assembly
@@ -470,10 +474,10 @@ int main(int argc, char** argv) {
                 char * const labelName = malloc(instructionLen);
                 strncpy(labelName, line.instruction, instructionLen - 1);
                 labelName[instructionLen - 1] = '\0';
-                for (size_t i = 0; i < constantCount; i++) {
-                    if (strcmp(labelName, constants[i].name) == 0) {
-                        constants[i].value = index;
-                        constants[i].valueKnown = true;
+                for (size_t i = 0; i < constants.len; i++) {
+                    if (strcmp(labelName, constants.arr[i].name) == 0) {
+                        constants.arr[i].value = index;
+                        constants.arr[i].valueKnown = true;
                         break;
                     }
                 }
@@ -499,7 +503,7 @@ int main(int argc, char** argv) {
                         }
                     }
 
-                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
+                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
                     if (num.valueKnown) {
                         if (num.twoBytes) {
                             printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
@@ -550,7 +554,7 @@ int main(int argc, char** argv) {
                         }
                     }
 
-                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
+                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
                     if (num.valueKnown) {
                         bin[index] = (uint8_t)(num.value & 0xff);
                         index++;
@@ -607,7 +611,7 @@ int main(int argc, char** argv) {
             if (strcmp(line.args, "") == 0) {
                 arg.addressingMode = implied;
             } else {
-                arg = parseArgument(line.args, index, constants, constantCount);
+                arg = parseArgument(line.args, index, constants);
             }
 
             // Absolute and relative appear the same in assembly
@@ -642,7 +646,7 @@ int main(int argc, char** argv) {
                 }
             }
 
-            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
+            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
             if (num.twoBytes) {
                 printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
                 exit(EXIT_FAILURE);
@@ -663,7 +667,7 @@ int main(int argc, char** argv) {
                 }
             }
 
-            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants, constantCount);
+            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
             bin[index] = (uint8_t)(num.value & 0xff);
             index++;
             bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
@@ -679,10 +683,10 @@ int main(int argc, char** argv) {
     }
     free(lines.arr);
 
-    for (size_t i = 0; i < constantCount; i++) {
-        free(constants[i].name);
+    for (size_t i = 0; i < constants.len; i++) {
+        free(constants.arr[i].name);
     }
-    free(constants);
+    free(constants.arr);
 
     free(unknownValueIndexes);
 
