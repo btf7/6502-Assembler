@@ -575,34 +575,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
     unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueArgs->len * sizeof *unknownValueArgs->arr);
 }
 
-int main(int argc, char** argv) {
-    // Step 1: Read file
-    // Step 2: Go through file once, getting all label names and defining constants
-    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
-    // Step 4: Go through all instructions where labels are used and punch in the correct value
-    // Step 5: Write bin to file
-
-    if (argc == 1) {
-        printf("No assembly file given\n");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Reading from file...\n");
-
-    const struct lineArr lines = readAsmFile(argv[1]);
-
-    printf("Reading labels and constants...\n");
-
-    const struct constantArr constants = readConstants(lines);
-
-    printf("Assembling...\n");
-
-    uint8_t bin[0x10000] = {0};
-    struct unknownValueArgArr unknownValueArgs = {0, NULL};
-    assemble(lines, constants, bin, &unknownValueArgs);
-
-    printf("Resolving labels...\n");
-
+void resolveLabels(const struct lineArr lines, const struct constantArr constants, const struct unknownValueArgArr unknownValueArgs, uint8_t * const bin) {
     for (size_t i = 0; i < unknownValueArgs.len; i++) {
         const struct line line = lines.arr[unknownValueArgs.arr[i].lineIndex];
         uint16_t index = unknownValueArgs.arr[i].index;
@@ -679,6 +652,37 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         }
     }
+}
+
+int main(int argc, char** argv) {
+    // Step 1: Read file
+    // Step 2: Go through file once, getting all label names and defining constants
+    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
+    // Step 4: Go through all instructions where labels are used and punch in the correct value
+    // Step 5: Write bin to file
+
+    if (argc == 1) {
+        printf("No assembly file given\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Reading from file...\n");
+
+    const struct lineArr lines = readAsmFile(argv[1]);
+
+    printf("Reading labels and constants...\n");
+
+    const struct constantArr constants = readConstants(lines);
+
+    printf("Assembling...\n");
+
+    uint8_t bin[0x10000] = {0};
+    struct unknownValueArgArr unknownValueArgs = {0, NULL};
+    assemble(lines, constants, bin, &unknownValueArgs);
+
+    printf("Resolving labels...\n");
+
+    resolveLabels(lines, constants, unknownValueArgs, bin);
 
     for (size_t i = 0; i < lines.len; i++) {
         free(lines.arr[i].instruction);
