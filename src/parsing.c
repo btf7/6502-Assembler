@@ -305,7 +305,7 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
             bool constantDefined = false;
             size_t i;
             for (i = 0; i < constants.len; i++) {
-                if (strncmp(expression, constants.arr[i].name, constantLen) == 0) {
+                if (strncmp(expression, constants.arr[i].name, constantLen) == 0 && strlen(constants.arr[i].name) == constantLen) {
                     constantDefined = true;
                     break;
                 }

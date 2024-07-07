@@ -784,3 +784,23 @@ TXS
 
 .ORG $8d80
 TYA
+
+; Test if instructions read constants and labels both forwards and backwards referenced
+.ORG $8da0
+lj:
+.DEF BYTE bx 123
+.DEF WORD wap $0102
+LDA bx
+BEQ *+bx
+BNE *+wap-$0100
+BCC lj
+BCS lj+2
+.ORG $8dc0
+LDA by
+BEQ *+by
+BNE *+waq-$2000
+BCC lk
+BCS lk+2
+lk:
+.DEF BYTE by 21
+.DEF WORD waq $2010
