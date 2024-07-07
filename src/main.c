@@ -259,6 +259,10 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         unknownValueIndexesMalloced *= 2;
                     }
                     unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
+                    if (unknownValueArgs->arr == NULL) {
+                        printf("Crashed due to realloc() fail\n");
+                        exit(EXIT_FAILURE);
+                    }
                 }
                 unknownValueArgs->arr[unknownValueArgs->len].index = index;
                 unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
@@ -288,6 +292,10 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 // Don't have to check if the label exists as this is its definition, it would have been read in step 2
                 const size_t instructionLen = strlen(line.instruction);
                 char * const labelName = malloc(instructionLen);
+                if (labelName == NULL) {
+                    printf("Crashed due to malloc() fail\n");
+                    exit(EXIT_FAILURE);
+                }
                 strncpy(labelName, line.instruction, instructionLen - 1);
                 labelName[instructionLen - 1] = '\0';
                 for (size_t i = 0; i < constants.len; i++) {
@@ -324,6 +332,10 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                                 unknownValueIndexesMalloced *= 2;
                             }
                             unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
+                            if (unknownValueArgs->arr == NULL) {
+                                printf("Crashed due to realloc() fail\n");
+                                exit(EXIT_FAILURE);
+                            }
                         }
                         unknownValueArgs->arr[unknownValueArgs->len].index = index;
                         unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
@@ -364,6 +376,10 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                                 unknownValueIndexesMalloced *= 2;
                             }
                             unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
+                            if (unknownValueArgs->arr == NULL) {
+                                printf("Crashed due to realloc() fail\n");
+                                exit(EXIT_FAILURE);
+                            }
                         }
                         unknownValueArgs->arr[unknownValueArgs->len].index = index;
                         unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
@@ -393,6 +409,10 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
     }
 
     unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueArgs->len * sizeof *unknownValueArgs->arr);
+    if (unknownValueArgs->arr == NULL) {
+        printf("Crashed due to realloc() fail\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void resolveLabels(const struct lineArr lines, const struct constantArr constants, const struct unknownValueArgArr unknownValueArgs, uint8_t * const bin) {
@@ -515,10 +535,18 @@ int main(int argc, char** argv) {
     if (argc == 2) {
         // No file name was given
         fileName = malloc(strlen(argv[1]) + 6);
+        if (fileName == NULL) {
+            printf("Crashed due to malloc() fail\n");
+            exit(EXIT_FAILURE);
+        }
         strcpy(fileName, argv[1]);
         strcpy(fileName + strlen(argv[1]), ".6502");
     } else {
         fileName = malloc(strlen(argv[2]) + 1);
+        if (fileName == NULL) {
+            printf("Crashed due to malloc() fail\n");
+            exit(EXIT_FAILURE);
+        }
         strcpy(fileName, argv[2]);
     }
 
