@@ -319,7 +319,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
         // Value should be punched in little endian
         bin[*indexp] = (uint8_t)(arg.value & 0xff);
         (*indexp)++;
-        bin[*indexp] = (uint8_t)((arg.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
+        bin[*indexp] = (uint8_t)(arg.value >> 8);
         (*indexp)++;
         break;
 

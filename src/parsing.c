@@ -323,7 +323,7 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
                 num.value += (constants.arr[i].value & 0xff) * sign;
                 lo = false;
             } else if (hi) {
-                num.value += ((constants.arr[i].value & 0xff00) >> 8) * sign;
+                num.value += (constants.arr[i].value >> 8) * sign;
                 hi = false;
             } else {
                 num.value += constants.arr[i].value * sign;

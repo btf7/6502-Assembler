@@ -215,7 +215,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 started = true;
                 // Punch the start address
                 bin[0xfffc] = (uint8_t)(index & 0xff);
-                bin[0xfffd] = (uint8_t)((index & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
+                bin[0xfffd] = (uint8_t)(index >> 8);
             }
 
             struct arg arg;
@@ -320,7 +320,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         } else {
                             bin[index] = (uint8_t)(num.value & 0xff);
                             index++;
-                            bin[index] = (uint8_t)((num.value & 0xff00) >> 8);
+                            bin[index] = (uint8_t)(num.value >> 8);
                             index++;
                         }
                     } else {
@@ -411,7 +411,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
 
             if (instruction == word) {
                 index++;
-                bin[index] = (uint8_t)((num.value & 0xff00) >> 8);
+                bin[index] = (uint8_t)(num.value >> 8);
             }
         } else {
             printf("Unknown value in unexpected instruction (%d)\n", instruction);
