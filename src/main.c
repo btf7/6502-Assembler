@@ -6,6 +6,89 @@
 #include <stdint.h>
 #include <string.h>
 
+int main(int argc, char** argv) {
+    // Step 1: Read file
+    // Step 2: Go through file once, getting all label names and defining constants
+    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
+    // Step 4: Go through all instructions where labels are used and punch in the correct value
+    // Step 5: Write bin to file
+
+    if (argc == 1) {
+        printf("No assembly file given\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Reading from file...\n");
+
+    const struct lineArr lines = readAsmFile(argv[1]);
+
+    printf("Reading labels and constants...\n");
+
+    const struct constantArr constants = parseConstants(lines);
+
+    printf("Assembling...\n");
+
+    uint8_t bin[0x10000] = {0};
+    struct unknownValueArgArr unknownValueArgs = {0, NULL};
+    assemble(lines, constants, bin, &unknownValueArgs);
+
+    printf("Resolving labels...\n");
+
+    resolveLabels(lines, constants, unknownValueArgs, bin);
+
+    for (size_t i = 0; i < lines.len; i++) {
+        free(lines.arr[i].instruction);
+        free(lines.arr[i].args);
+    }
+    free(lines.arr);
+
+    for (size_t i = 0; i < constants.len; i++) {
+        free(constants.arr[i].name);
+    }
+    free(constants.arr);
+
+    free(unknownValueArgs.arr);
+
+    printf("Writing to file...\n");
+
+    char* fileName;
+    if (argc == 2) {
+        // No file name was given
+        fileName = malloc(strlen(argv[1]) + 6);
+        if (!fileName) {
+            printf("Crashed due to malloc() fail\n");
+            exit(EXIT_FAILURE);
+        }
+        strcpy(fileName, argv[1]);
+        strcpy(fileName + strlen(argv[1]), ".6502");
+    } else {
+        fileName = malloc(strlen(argv[2]) + 1);
+        if (!fileName) {
+            printf("Crashed due to malloc() fail\n");
+            exit(EXIT_FAILURE);
+        }
+        strcpy(fileName, argv[2]);
+    }
+
+    FILE * const outFile = fopen(fileName, "wb");
+    if (!outFile) {
+        printf("Couldn't create output file\n");
+        exit(EXIT_FAILURE);
+    }
+    free(fileName);
+
+    for (uint32_t i = 0; i < 0x10000; i++) {
+        if (putc(bin[i], outFile) == EOF) {
+            printf("Char write at 0x%x (0x%x) failed. Continuing anyway\n", i, bin[i]);
+        }
+    }
+
+    fclose(outFile);
+
+    printf("Assembled successfully\n");
+    return EXIT_SUCCESS;
+}
+
 struct lineArr readAsmFile(const char * const fileName) {
     FILE * const file = fopen(fileName, "r");
     if (!file) {
@@ -434,87 +517,4 @@ void* expandDynamicArr(void* arr, size_t * const malloced, const size_t elemSize
         exit(EXIT_FAILURE);
     }
     return arr;
-}
-
-int main(int argc, char** argv) {
-    // Step 1: Read file
-    // Step 2: Go through file once, getting all label names and defining constants
-    // Step 3: Go through file once, punching all instructions to bin. Keep track of label addresses and where they're used
-    // Step 4: Go through all instructions where labels are used and punch in the correct value
-    // Step 5: Write bin to file
-
-    if (argc == 1) {
-        printf("No assembly file given\n");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Reading from file...\n");
-
-    const struct lineArr lines = readAsmFile(argv[1]);
-
-    printf("Reading labels and constants...\n");
-
-    const struct constantArr constants = parseConstants(lines);
-
-    printf("Assembling...\n");
-
-    uint8_t bin[0x10000] = {0};
-    struct unknownValueArgArr unknownValueArgs = {0, NULL};
-    assemble(lines, constants, bin, &unknownValueArgs);
-
-    printf("Resolving labels...\n");
-
-    resolveLabels(lines, constants, unknownValueArgs, bin);
-
-    for (size_t i = 0; i < lines.len; i++) {
-        free(lines.arr[i].instruction);
-        free(lines.arr[i].args);
-    }
-    free(lines.arr);
-
-    for (size_t i = 0; i < constants.len; i++) {
-        free(constants.arr[i].name);
-    }
-    free(constants.arr);
-
-    free(unknownValueArgs.arr);
-
-    printf("Writing to file...\n");
-
-    char* fileName;
-    if (argc == 2) {
-        // No file name was given
-        fileName = malloc(strlen(argv[1]) + 6);
-        if (!fileName) {
-            printf("Crashed due to malloc() fail\n");
-            exit(EXIT_FAILURE);
-        }
-        strcpy(fileName, argv[1]);
-        strcpy(fileName + strlen(argv[1]), ".6502");
-    } else {
-        fileName = malloc(strlen(argv[2]) + 1);
-        if (!fileName) {
-            printf("Crashed due to malloc() fail\n");
-            exit(EXIT_FAILURE);
-        }
-        strcpy(fileName, argv[2]);
-    }
-
-    FILE * const outFile = fopen(fileName, "wb");
-    if (!outFile) {
-        printf("Couldn't create output file\n");
-        exit(EXIT_FAILURE);
-    }
-    free(fileName);
-
-    for (uint32_t i = 0; i < 0x10000; i++) {
-        if (putc(bin[i], outFile) == EOF) {
-            printf("Char write at 0x%x (0x%x) failed. Continuing anyway\n", i, bin[i]);
-        }
-    }
-
-    fclose(outFile);
-
-    printf("Assembled successfully\n");
-    return EXIT_SUCCESS;
 }
