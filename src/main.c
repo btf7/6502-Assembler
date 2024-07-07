@@ -203,7 +203,7 @@ struct lineArr readAsmFile(const char * const fileName) {
 void assemble(const struct lineArr lines, const struct constantArr constants, uint8_t * const bin, struct unknownValueArgArr * const unknownValueArgs) {
     uint16_t index = 0x8000;
     bool started = false;
-    size_t unknownValueIndexesMalloced = 0;
+    size_t unknownValueArgsMalloced = 0;
 
     for (size_t i = 0; i < lines.len; i++) {
         const struct line line = lines.arr[i];
@@ -252,8 +252,8 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
             if (arg.valueKnown) {
                 punchInstruction(instruction, arg, bin, &index);
             } else {
-                if (unknownValueArgs->len == unknownValueIndexesMalloced) {
-                    unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueIndexesMalloced, sizeof *unknownValueArgs->arr);
+                if (unknownValueArgs->len == unknownValueArgsMalloced) {
+                    unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueArgsMalloced, sizeof *unknownValueArgs->arr);
                 }
                 unknownValueArgs->arr[unknownValueArgs->len].index = index;
                 unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
@@ -324,8 +324,8 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                             index++;
                         }
                     } else {
-                        if (unknownValueArgs->len == unknownValueIndexesMalloced) {
-                            unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueIndexesMalloced, sizeof *unknownValueArgs->arr);
+                        if (unknownValueArgs->len == unknownValueArgsMalloced) {
+                            unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueArgsMalloced, sizeof *unknownValueArgs->arr);
                         }
                         unknownValueArgs->arr[unknownValueArgs->len].index = index;
                         unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
