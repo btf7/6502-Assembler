@@ -308,7 +308,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 while (true) {
                     const size_t expressionLen = findExpressionLen(line.args + offset);
 
-                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
+                    const struct expressionValue num = parseExpression(line.args + offset, expressionLen, index, constants);
                     if (num.valueKnown) {
                         if (instruction == byte) {
                             if (num.twoBytes) {
@@ -402,7 +402,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             const size_t offset = unknownValueArgs.arr[i].offset;
             const size_t expressionLen = findExpressionLen(line.args + offset);
 
-            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
+            const struct expressionValue num = parseExpression(line.args + offset, expressionLen, index, constants);
             if (instruction == byte && num.twoBytes) {
                 printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
                 exit(EXIT_FAILURE);

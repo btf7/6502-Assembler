@@ -92,7 +92,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
             }
 
             // Pass 0 for index so it's effectively ignored
-            const struct number num = parseExpression(line.args + offset, strlen(line.args) - offset, 0, constants);
+            const struct expressionValue num = parseExpression(line.args + offset, strlen(line.args) - offset, 0, constants);
 
             if (!num.valueKnown) {
                 printf("Constants cannot be defined by labels: .DEF %s\n", line.args);
@@ -173,8 +173,7 @@ uint8_t hexCharToInt(const char c) {
     }
 }
 
-// TODO this doesn't set number.valueKnown as it isn't used, this is messy
-struct number parseNumber(const char * const text) {
+struct numberValue parseNumber(const char * const text) {
     int32_t num = 0; // Max number is uint16_t, but go bigger to detect too big numbers
 
     if (isdigit(text[0])) {
@@ -201,9 +200,9 @@ struct number parseNumber(const char * const text) {
         }
 
         if (num > 255) {
-            return (struct number){num, true, i};
+            return (struct numberValue){num, true, i};
         }
-        return (struct number){num, false, i};
+        return (struct numberValue){num, false, i};
     }
 
     if (text[0] == '$') {
@@ -228,9 +227,9 @@ struct number parseNumber(const char * const text) {
         }
 
         if (i == 5) {
-            return (struct number){num, true, i};
+            return (struct numberValue){num, true, i};
         }
-        return (struct number){num, false, i};
+        return (struct numberValue){num, false, i};
     }
 
     if (text[0] == '%') {
@@ -254,22 +253,22 @@ struct number parseNumber(const char * const text) {
         }
 
         if (i == 17) {
-            return (struct number){num, true, i};
+            return (struct numberValue){num, true, i};
         }
-        return (struct number){num, false, i};
+        return (struct numberValue){num, false, i};
     }
 
     printf("Failed to parse number: %s\n", text);
     exit(EXIT_FAILURE);
 }
 
-struct number parseExpression(const char * const text, const size_t expressionLen, const uint16_t index, const struct constantArr constants) {
+struct expressionValue parseExpression(const char * const text, const size_t expressionLen, const uint16_t index, const struct constantArr constants) {
     if (expressionLen == 0) {
         printf("No expression to evaluate: %s\n", text);
         exit(EXIT_FAILURE);
     }
 
-    struct number num = {0, false, 0, true};
+    struct expressionValue num = {0, false, true};
     const char* expression = text;
     int8_t sign = 1; // Either 1 or -1 depending on if there's a + or -
     bool lo = false;
@@ -336,7 +335,7 @@ struct number parseExpression(const char * const text, const size_t expressionLe
             num.twoBytes = true;
             expression++;
         } else if (isdigit(expression[0]) || expression[0] == '$' || expression[0] == '%') {
-            const struct number otherNum = parseNumber(expression);
+            const struct numberValue otherNum = parseNumber(expression);
 
             num.value += otherNum.value * sign;
             num.twoBytes |= otherNum.twoBytes;
@@ -414,7 +413,7 @@ struct arg parseArgument(const char * const text, const uint16_t index, const st
         arg.addressingMode = zeroPage;
     }
 
-    const struct number num = parseExpression(text + expressionStartOffset, expressionLen, index, constants);
+    const struct expressionValue num = parseExpression(text + expressionStartOffset, expressionLen, index, constants);
     arg.value = num.value;
     arg.valueKnown = num.valueKnown;
 

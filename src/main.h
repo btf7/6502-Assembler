@@ -21,10 +21,15 @@ struct lineArr {
     struct line* arr;
 };
 
-struct number {
+struct numberValue {
     uint16_t value;
     bool twoBytes;
     uint8_t charsRead;
+};
+
+struct expressionValue {
+    uint16_t value;
+    bool twoBytes;
     bool valueKnown;
 };
 
@@ -69,6 +74,6 @@ bool is6502Instruction(enum instructions instruction);
 
 struct constantArr parseConstants(struct lineArr lines);
 uint8_t hexCharToInt(char c);
-struct number parseNumber(const char* text);
-struct number parseExpression(const char* text, size_t expressionLen, uint16_t index, struct constantArr constants);
+struct numberValue parseNumber(const char* text);
+struct expressionValue parseExpression(const char* text, size_t expressionLen, uint16_t index, struct constantArr constants);
 struct arg parseArgument(const char* text, uint16_t index, struct constantArr constants);
