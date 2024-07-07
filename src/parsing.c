@@ -23,7 +23,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
                     constantsMalloced *= 2;
                 }
                 constants.arr = realloc(constants.arr, constantsMalloced * sizeof *constants.arr);
-                if (constants.arr == NULL) {
+                if (!constants.arr) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -63,7 +63,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
                             exit(EXIT_FAILURE);
                         }
                         constantp->name = realloc(constantp->name, nameLen + 1);
-                        if (constantp->name == NULL) {
+                        if (!constantp->name) {
                             printf("Crashed due to realloc() fail\n");
                             exit(EXIT_FAILURE);
                         }
@@ -96,7 +96,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
                             nameMalloced *= 2;
                         }
                         constantp->name = realloc(constantp->name, nameMalloced);
-                        if (constantp->name == NULL) {
+                        if (!constantp->name) {
                             printf("Crashed due to realloc() fail\n");
                             exit(EXIT_FAILURE);
                         }
@@ -132,7 +132,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
 
                     if (c == ':') {
                         constantp->name = realloc(constantp->name, nameLen + 1);
-                        if (constantp->name == NULL) {
+                        if (!constantp->name) {
                             printf("Crashed due to realloc() fail\n");
                             exit(EXIT_FAILURE);
                         }
@@ -165,7 +165,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
                             nameMalloced *= 2;
                         }
                         constantp->name = realloc(constantp->name, nameMalloced);
-                        if (constantp->name == NULL) {
+                        if (!constantp->name) {
                             printf("Crashed due to realloc() fail\n");
                             exit(EXIT_FAILURE);
                         }
@@ -179,7 +179,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
     }
 
     constants.arr = realloc(constants.arr, constants.len * sizeof *constants.arr);
-    if (constants.arr == NULL) {
+    if (!constants.arr) {
         printf("Crashed due to realloc() fail\n");
         exit(EXIT_FAILURE);
     }

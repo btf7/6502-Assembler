@@ -8,7 +8,7 @@
 
 struct lineArr readAsmFile(const char * const fileName) {
     FILE * const file = fopen(fileName, "r");
-    if (file == NULL) {
+    if (!file) {
         printf("Could not open file: %s\n", fileName);
         exit(EXIT_FAILURE);
     }
@@ -34,7 +34,7 @@ struct lineArr readAsmFile(const char * const fileName) {
         if (c == '\n' || c == EOF) {
             // End the current line
 
-            if (linep != NULL) {
+            if (linep) {
                 // Terminate strings as appropriate
                 if (instructionRead) {
                     // Remove whitespace at the end if there is any
@@ -44,16 +44,16 @@ struct lineArr readAsmFile(const char * const fileName) {
                     } else {
                         linep->args = realloc(linep->args, strLen + 1);
                     }
-                    if (linep->args == NULL) {
+                    if (!linep->args) {
                         printf("Crashed due to realloc() fail\n");
                         exit(EXIT_FAILURE);
                     }
 
                     linep->args[strLen] = '\0';
                 } else {
-                    // The instruction cannot be empty because then (linep == NULL) would have returned true
+                    // The instruction cannot be empty because then linep would be NULL
                     linep->instruction = realloc(linep->instruction, strLen + 1);
-                    if (linep->instruction == NULL) {
+                    if (!linep->instruction) {
                         printf("Crashed due to realloc() fail\n");
                         exit(EXIT_FAILURE);
                     }
@@ -61,7 +61,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                     linep->instruction[strLen] = '\0';
 
                     linep->args = calloc(1, 1);
-                    if (linep->args == NULL) {
+                    if (!linep->args) {
                         printf("Crashed due to calloc() fail\n");
                         exit(EXIT_FAILURE);
                     }
@@ -77,7 +77,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                 }
 
                 lines.arr = realloc(lines.arr, sizeof *lines.arr * lines.len);
-                if (lines.arr == NULL) {
+                if (!lines.arr) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -104,7 +104,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                     if (strLen == strMalloced) {
                         strMalloced *= 2;
                         linep->args = realloc(linep->args, strMalloced);
-                        if (linep->args == NULL) {
+                        if (!linep->args) {
                             printf("Crashed due to realloc() fail\n");
                             exit(EXIT_FAILURE);
                         }
@@ -113,9 +113,9 @@ struct lineArr readAsmFile(const char * const fileName) {
                     linep->args[strLen] = ' ';
                     strLen++;
                 }
-            } else if (linep != NULL) {
+            } else if (linep) {
                 linep->instruction = realloc(linep->instruction, strLen + 1);
-                if (linep->instruction == NULL) {
+                if (!linep->instruction) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -126,7 +126,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                 strLen = 0;
                 instructionRead = true;
                 linep->args = malloc(1);
-                if (linep->args == NULL) {
+                if (!linep->args) {
                     printf("Crashed due to malloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -141,20 +141,20 @@ struct lineArr readAsmFile(const char * const fileName) {
             // This is the first line, initiate the array
             linesMalloced = 1;
             lines.arr = malloc(sizeof *lines.arr);
-            if (lines.arr == NULL) {
+            if (!lines.arr) {
                 printf("Crashed due to malloc() fail\n");
                 exit(EXIT_FAILURE);
             }
         }
 
-        if (linep == NULL) {
+        if (!linep) {
             // Create a new line
 
             // Reserve space
             if (lines.len == linesMalloced) {
                 linesMalloced *= 2;
                 lines.arr = realloc(lines.arr, sizeof *lines.arr * linesMalloced);
-                if (lines.arr == NULL) {
+                if (!lines.arr) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -166,7 +166,7 @@ struct lineArr readAsmFile(const char * const fileName) {
             strMalloced = 1;
             strLen = 0;
             linep->instruction = malloc(1);
-            if (linep->instruction == NULL) {
+            if (!linep->instruction) {
                 printf("Crashed due to malloc() fail\n");
                 exit(EXIT_FAILURE);
             }
@@ -177,13 +177,13 @@ struct lineArr readAsmFile(const char * const fileName) {
             strMalloced *= 2;
             if (instructionRead) {
                 linep->args = realloc(linep->args, strMalloced);
-                if (linep->args == NULL) {
+                if (!linep->args) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
             } else {
                 linep->instruction = realloc(linep->instruction, strMalloced);
-                if (linep->instruction == NULL) {
+                if (!linep->instruction) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -259,7 +259,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         unknownValueIndexesMalloced *= 2;
                     }
                     unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
-                    if (unknownValueArgs->arr == NULL) {
+                    if (!unknownValueArgs->arr) {
                         printf("Crashed due to realloc() fail\n");
                         exit(EXIT_FAILURE);
                     }
@@ -291,7 +291,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 // Don't have to check if the label exists as this is its definition, it would have been read in step 2
                 const size_t instructionLen = strlen(line.instruction);
                 char * const labelName = malloc(instructionLen);
-                if (labelName == NULL) {
+                if (!labelName) {
                     printf("Crashed due to malloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
@@ -340,7 +340,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                                 unknownValueIndexesMalloced *= 2;
                             }
                             unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
-                            if (unknownValueArgs->arr == NULL) {
+                            if (!unknownValueArgs->arr) {
                                 printf("Crashed due to realloc() fail\n");
                                 exit(EXIT_FAILURE);
                             }
@@ -378,7 +378,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
     }
 
     unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueArgs->len * sizeof *unknownValueArgs->arr);
-    if (unknownValueArgs->arr == NULL) {
+    if (!unknownValueArgs->arr) {
         printf("Crashed due to realloc() fail\n");
         exit(EXIT_FAILURE);
     }
@@ -504,7 +504,7 @@ int main(int argc, char** argv) {
     if (argc == 2) {
         // No file name was given
         fileName = malloc(strlen(argv[1]) + 6);
-        if (fileName == NULL) {
+        if (!fileName) {
             printf("Crashed due to malloc() fail\n");
             exit(EXIT_FAILURE);
         }
@@ -512,7 +512,7 @@ int main(int argc, char** argv) {
         strcpy(fileName + strlen(argv[1]), ".6502");
     } else {
         fileName = malloc(strlen(argv[2]) + 1);
-        if (fileName == NULL) {
+        if (!fileName) {
             printf("Crashed due to malloc() fail\n");
             exit(EXIT_FAILURE);
         }
@@ -520,7 +520,7 @@ int main(int argc, char** argv) {
     }
 
     FILE * const outFile = fopen(fileName, "wb");
-    if (outFile == NULL) {
+    if (!outFile) {
         printf("Couldn't create output file\n");
         exit(EXIT_FAILURE);
     }
