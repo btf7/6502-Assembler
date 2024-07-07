@@ -282,7 +282,6 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 }
             }
         } else {
-            size_t offset;
             switch (instruction) {
                 case constant:
                 break;
@@ -313,61 +312,26 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 break;
 
                 case byte:
-                offset = 0;
-                while (true) {
-                    const size_t expressionLen = findExpressionLen(line.args + offset);
-
-                    const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
-                    if (num.valueKnown) {
-                        if (num.twoBytes) {
-                            printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
-                            exit(EXIT_FAILURE);
-                        }
-                        bin[index] = (uint8_t)num.value;
-                    } else {
-                        if (unknownValueArgs->len == unknownValueIndexesMalloced) {
-                            if (unknownValueIndexesMalloced == 0) {
-                                unknownValueIndexesMalloced = 1;
-                            } else {
-                                unknownValueIndexesMalloced *= 2;
-                            }
-                            unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
-                            if (unknownValueArgs->arr == NULL) {
-                                printf("Crashed due to realloc() fail\n");
-                                exit(EXIT_FAILURE);
-                            }
-                        }
-                        unknownValueArgs->arr[unknownValueArgs->len].index = index;
-                        unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
-                        unknownValueArgs->arr[unknownValueArgs->len].offset = offset;
-                        unknownValueArgs->len++;
-                    }
-                    index++;
-
-                    offset += expressionLen;
-                    if (line.args[offset] == ' ') {
-                        offset++;
-                        continue;
-                    } else if (line.args[offset] == '\0') {
-                        break;
-                    } else {
-                        printf("Unexpected character '%c' in parsed arguments: %s\n", line.args[offset], line.args);
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                break;
-
                 case word:
-                offset = 0;
+                size_t offset = 0;
                 while (true) {
                     const size_t expressionLen = findExpressionLen(line.args + offset);
 
                     const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
                     if (num.valueKnown) {
-                        bin[index] = (uint8_t)(num.value & 0xff);
-                        index++;
-                        bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
-                        index++;
+                        if (instruction == byte) {
+                            if (num.twoBytes) {
+                                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
+                                exit(EXIT_FAILURE);
+                            }
+                            bin[index] = (uint8_t)num.value;
+                            index++;
+                        } else {
+                            bin[index] = (uint8_t)(num.value & 0xff);
+                            index++;
+                            bin[index] = (uint8_t)((num.value & 0xff00) >> 8);
+                            index++;
+                        }
                     } else {
                         if (unknownValueArgs->len == unknownValueIndexesMalloced) {
                             if (unknownValueIndexesMalloced == 0) {
@@ -385,7 +349,12 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
                         unknownValueArgs->arr[unknownValueArgs->len].offset = offset;
                         unknownValueArgs->len++;
-                        index += 2;
+
+                        if (instruction == byte) {
+                            index++;
+                        } else {
+                            index += 2;
+                        }
                     }
 
                     offset += expressionLen;
