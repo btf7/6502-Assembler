@@ -398,24 +398,21 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             }
 
             punchInstruction(instruction, arg, bin, &index);
-        } else if (instruction == byte) {
+        } else if (instruction == byte || instruction == word) {
             const size_t offset = unknownValueArgs.arr[i].offset;
             const size_t expressionLen = findExpressionLen(line.args + offset);
 
             const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
-            if (num.twoBytes) {
+            if (instruction == byte && num.twoBytes) {
                 printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
                 exit(EXIT_FAILURE);
             }
-            bin[index] = (uint8_t)num.value;
-        } else if (instruction == word) {
-            const size_t offset = unknownValueArgs.arr[i].offset;
-            const size_t expressionLen = findExpressionLen(line.args + offset);
-
-            const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
             bin[index] = (uint8_t)(num.value & 0xff);
-            index++;
-            bin[index] = (uint8_t)((num.value & 0xff00) >> 8); // The & 0xff00 is redundant but makes it feel safer
+
+            if (instruction == word) {
+                index++;
+                bin[index] = (uint8_t)((num.value & 0xff00) >> 8);
+            }
         } else {
             printf("Unknown value in unexpected instruction (%d)\n", instruction);
             exit(EXIT_FAILURE);
