@@ -269,10 +269,10 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 }
                 strncpy(labelName, line.instruction, instructionLen - 1);
                 labelName[instructionLen - 1] = '\0';
-                for (size_t i = 0; i < constants.len; i++) {
-                    if (strcmp(labelName, constants.arr[i].name) == 0) {
-                        constants.arr[i].value = index;
-                        constants.arr[i].valueKnown = true;
+                for (size_t j = 0; j < constants.len; j++) {
+                    if (strcmp(labelName, constants.arr[j].name) == 0) {
+                        constants.arr[j].value = index;
+                        constants.arr[j].valueKnown = true;
                         break;
                     }
                 }

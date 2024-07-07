@@ -325,7 +325,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
 
         case relative:
         (*indexp)++;
-        int32_t dist = arg.value - *indexp;
+        const int32_t dist = arg.value - *indexp;
         if (dist < -126 || dist > 129) {
             printf("Branch distance too far: Must be -126 to +129, given %d: Branch from 0x%x to 0x%x\n", dist, *indexp, arg.value);
             exit(EXIT_FAILURE);
