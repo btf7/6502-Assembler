@@ -102,12 +102,7 @@ struct lineArr readAsmFile(const char * const fileName) {
             if (instructionRead) {
                 if (strLen != 0 && linep->args[strLen - 1] != ' ') {
                     if (strLen == strMalloced) {
-                        strMalloced *= 2;
-                        linep->args = realloc(linep->args, strMalloced);
-                        if (!linep->args) {
-                            printf("Crashed due to realloc() fail\n");
-                            exit(EXIT_FAILURE);
-                        }
+                        linep->args = expandDynamicArr(linep->args, &strMalloced, sizeof *linep->args);
                     }
 
                     linep->args[strLen] = ' ';
@@ -152,12 +147,7 @@ struct lineArr readAsmFile(const char * const fileName) {
 
             // Reserve space
             if (lines.len == linesMalloced) {
-                linesMalloced *= 2;
-                lines.arr = realloc(lines.arr, sizeof *lines.arr * linesMalloced);
-                if (!lines.arr) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                lines.arr = expandDynamicArr(lines.arr, &linesMalloced, sizeof *lines.arr);
             }
 
             // Create the line
@@ -174,19 +164,10 @@ struct lineArr readAsmFile(const char * const fileName) {
 
         // Reserve space
         if (strLen == strMalloced) {
-            strMalloced *= 2;
             if (instructionRead) {
-                linep->args = realloc(linep->args, strMalloced);
-                if (!linep->args) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                linep->args = expandDynamicArr(linep->args, &strMalloced, sizeof *linep->args);
             } else {
-                linep->instruction = realloc(linep->instruction, strMalloced);
-                if (!linep->instruction) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                linep->instruction = expandDynamicArr(linep->instruction, &strMalloced, sizeof *linep->instruction);
             }
         }
 
