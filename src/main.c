@@ -307,17 +307,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 case byte:
                 offset = 0;
                 while (true) {
-                    // Find the length of the expression
-                    size_t expressionLen = 0;
-                    while (true) {
-                        if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
-                            expressionLen += 3;
-                        } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
-                            break;
-                        } else {
-                            expressionLen++;
-                        }
-                    }
+                    const size_t expressionLen = findExpressionLen(line.args + offset);
 
                     const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
                     if (num.valueKnown) {
@@ -358,17 +348,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 case word:
                 offset = 0;
                 while (true) {
-                    // Find the length of the expression
-                    size_t expressionLen = 0;
-                    while (true) {
-                        if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
-                            expressionLen += 3;
-                        } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
-                            break;
-                        } else {
-                            expressionLen++;
-                        }
-                    }
+                    const size_t expressionLen = findExpressionLen(line.args + offset);
 
                     const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
                     if (num.valueKnown) {
@@ -449,18 +429,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             punchInstruction(instruction, arg, bin, &index);
         } else if (instruction == byte) {
             const size_t offset = unknownValueArgs.arr[i].offset;
-
-            // Find the length of the expression
-            size_t expressionLen = 0;
-            while (true) {
-                if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
-                    expressionLen += 3;
-                } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
-                    break;
-                } else {
-                    expressionLen++;
-                }
-            }
+            const size_t expressionLen = findExpressionLen(line.args + offset);
 
             const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
             if (num.twoBytes) {
@@ -470,18 +439,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             bin[index] = (uint8_t)num.value;
         } else if (instruction == word) {
             const size_t offset = unknownValueArgs.arr[i].offset;
-
-            // Find the length of the expression
-            size_t expressionLen = 0;
-            while (true) {
-                if (strncmp("LO ", line.args + offset + expressionLen, 3) == 0 || strncmp("HI ", line.args + offset + expressionLen, 3) == 0) {
-                    expressionLen += 3;
-                } else if ((line.args + offset)[expressionLen] == ' ' || (line.args + offset)[expressionLen] == '\0') {
-                    break;
-                } else {
-                    expressionLen++;
-                }
-            }
+            const size_t expressionLen = findExpressionLen(line.args + offset);
 
             const struct number num = parseExpression(line.args + offset, expressionLen, index, constants);
             bin[index] = (uint8_t)(num.value & 0xff);
@@ -492,6 +450,20 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             exit(EXIT_FAILURE);
         }
     }
+}
+
+size_t findExpressionLen(const char * const expression) {
+    size_t len = 0;
+    while (true) {
+        if (strncmp("LO ", expression + len, 3) == 0 || strncmp("HI ", expression + len, 3) == 0) {
+            len += 3;
+        } else if (expression[len] == ' ' || expression[len] == '\0') {
+            break;
+        } else {
+            len++;
+        }
+    }
+    return len;
 }
 
 int main(int argc, char** argv) {
