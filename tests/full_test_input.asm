@@ -804,3 +804,27 @@ BCS lk+2
 lk:
 .DEF BYTE by 21
 .DEF WORD waq $2010
+
+; Test if constants with overlapping names (eg. asd and asdf) get confused
+.DEF BYTE bsmallbig $12
+.DEF BYTE bsmallbigg $13
+.DEF BYTE bbigsmalll $31
+.DEF BYTE bbigsmall $21
+.DEF WORD wsmallbig $1245
+.DEF WORD wsmallbigg $1346
+.DEF WORD wbigsmalll $6431
+.DEF WORD wbigsmall $5421
+.ORG $1245
+lsmallbig:
+.ORG $1346
+lsmallbigg:
+.ORG $6431
+lbigsmalll:
+.ORG $5421
+lbigsmall:
+.ORG $8de0
+.BYTE bsmallbig bsmallbigg bbigsmalll bbigsmall
+.ORG $8e00
+.WORD wsmallbig wsmallbigg wbigsmalll wbigsmall
+.ORG $8e20
+.WORD lsmallbig lsmallbigg lbigsmalll lbigsmall
