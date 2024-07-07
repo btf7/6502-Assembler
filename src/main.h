@@ -61,6 +61,7 @@ struct lineArr readAsmFile(const char* fileName);
 void assemble(struct lineArr lines, struct constantArr constants, uint8_t* bin, struct unknownValueArgArr* unknownValueArgs);
 void resolveLabels(struct lineArr lines, struct constantArr constants, struct unknownValueArgArr unknownValueArgs, uint8_t* bin);
 size_t findExpressionLen(const char* expression);
+void* expandDynamicArr(void* arr, size_t* malloced, size_t elemSize);
 
 enum instructions identifyInstruction(const char* text);
 void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp);

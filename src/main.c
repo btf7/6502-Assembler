@@ -253,16 +253,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 punchInstruction(instruction, arg, bin, &index);
             } else {
                 if (unknownValueArgs->len == unknownValueIndexesMalloced) {
-                    if (unknownValueIndexesMalloced == 0) {
-                        unknownValueIndexesMalloced = 1;
-                    } else {
-                        unknownValueIndexesMalloced *= 2;
-                    }
-                    unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
-                    if (!unknownValueArgs->arr) {
-                        printf("Crashed due to realloc() fail\n");
-                        exit(EXIT_FAILURE);
-                    }
+                    unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueIndexesMalloced, sizeof *unknownValueArgs->arr);
                 }
                 unknownValueArgs->arr[unknownValueArgs->len].index = index;
                 unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
@@ -334,16 +325,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         }
                     } else {
                         if (unknownValueArgs->len == unknownValueIndexesMalloced) {
-                            if (unknownValueIndexesMalloced == 0) {
-                                unknownValueIndexesMalloced = 1;
-                            } else {
-                                unknownValueIndexesMalloced *= 2;
-                            }
-                            unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueIndexesMalloced * sizeof *unknownValueArgs->arr);
-                            if (!unknownValueArgs->arr) {
-                                printf("Crashed due to realloc() fail\n");
-                                exit(EXIT_FAILURE);
-                            }
+                            unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueIndexesMalloced, sizeof *unknownValueArgs->arr);
                         }
                         unknownValueArgs->arr[unknownValueArgs->len].index = index;
                         unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
@@ -453,6 +435,20 @@ size_t findExpressionLen(const char * const expression) {
         }
     }
     return len;
+}
+
+void* expandDynamicArr(void* arr, size_t * const malloced, const size_t elemSize) {
+    if (*malloced == 0) {
+        *malloced = 1;
+    } else {
+        *malloced *= 2;
+    }
+    arr = realloc(arr, *malloced * elemSize);
+    if (!arr) {
+        printf("Crashed due to realloc() fail\n");
+        exit(EXIT_FAILURE);
+    }
+    return arr;
 }
 
 int main(int argc, char** argv) {
