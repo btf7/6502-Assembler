@@ -40,7 +40,7 @@ Comments are added with a `;`. Everything after a `;` in a line is ignored.
 
 Everything (except hex values) is case-sensitive. All instructions and pseudo-ops must be in full caps.
 
-Numbers can be inputed in 3 ways: decimal (`123`), hex (`$A1`), or binary (`%10101010`).
+Numbers can be inputted in 3 ways: decimal (`123`), hex (`$A1`), or binary (`%10101010`).
 
 Expressions are any sequence of numbers, constants, labels, or `*`s combined with `+`s and `-`s.
 
