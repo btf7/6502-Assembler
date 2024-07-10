@@ -37,8 +37,11 @@ int main(int argc, char** argv) {
     resolveLabels(lines, constants, unknownValueArgs, bin);
 
     for (size_t i = 0; i < lines.len; i++) {
-        free(lines.arr[i].instruction);
-        free(lines.arr[i].args);
+        const struct tokenArr line = lines.arr[i];
+        for (size_t j = 0; j < line.len; j++) {
+            free(line.arr[j]);
+        }
+        free(line.arr);
     }
     free(lines.arr);
 
@@ -99,10 +102,12 @@ struct lineArr readAsmFile(const char * const fileName) {
     struct lineArr lines = {0, NULL};
     size_t linesMalloced = 0;
 
-    struct line* linep = NULL; // Should always either be a pointer to last element in lines.arr or NULL if the current line is empty
-    size_t strMalloced = 0;
+    struct tokenArr* linep = NULL; // Should always either be a pointer to last element in lines.arr or NULL if the current line is empty
+    size_t tokensMalloced = 0;
+
+    char** tokenp = NULL; // Should always either be a pointer to the last element in linep->arr or NULL if the current token is empty
     size_t strLen = 0;
-    bool instructionRead = false; // Are we reading an instruction or args
+    size_t strMalloced = 0;
 
     bool lineCommented = false;
 
@@ -115,39 +120,24 @@ struct lineArr readAsmFile(const char * const fileName) {
         }
 
         if (c == '\n' || c == EOF) {
+            // End the current token
+
+            if (tokenp) {
+                *tokenp = realloc(*tokenp, strLen + 1);
+                if (!*tokenp) {
+                    printf("Crashed due to realloc() fail\n");
+                    exit(EXIT_FAILURE);
+                }
+                (*tokenp)[strLen] = '\0';
+            }
+
             // End the current line
 
             if (linep) {
-                // Terminate strings as appropriate
-                if (instructionRead) {
-                    // Remove whitespace at the end if there is any
-                    if (linep->args[strLen - 1] == ' ') {
-                        linep->args = realloc(linep->args, strLen);
-                        strLen--;
-                    } else {
-                        linep->args = realloc(linep->args, strLen + 1);
-                    }
-                    if (!linep->args) {
-                        printf("Crashed due to realloc() fail\n");
-                        exit(EXIT_FAILURE);
-                    }
-
-                    linep->args[strLen] = '\0';
-                } else {
-                    // The instruction cannot be empty because then linep would be NULL
-                    linep->instruction = realloc(linep->instruction, strLen + 1);
-                    if (!linep->instruction) {
-                        printf("Crashed due to realloc() fail\n");
-                        exit(EXIT_FAILURE);
-                    }
-
-                    linep->instruction[strLen] = '\0';
-
-                    linep->args = calloc(1, 1);
-                    if (!linep->args) {
-                        printf("Crashed due to calloc() fail\n");
-                        exit(EXIT_FAILURE);
-                    }
+                linep->arr = realloc(linep->arr, linep->len * sizeof *linep->arr);
+                if (!linep->arr) {
+                    printf("Crashed due to realloc() fail\n");
+                    exit(EXIT_FAILURE);
                 }
             }
 
@@ -159,7 +149,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                     exit(EXIT_FAILURE);
                 }
 
-                lines.arr = realloc(lines.arr, sizeof *lines.arr * lines.len);
+                lines.arr = realloc(lines.arr, lines.len * sizeof *lines.arr);
                 if (!lines.arr) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
@@ -168,10 +158,8 @@ struct lineArr readAsmFile(const char * const fileName) {
                 return lines;
             }
 
+            tokenp = NULL;
             linep = NULL;
-            strMalloced = 0;
-            strLen = 0;
-            instructionRead = false;
             lineCommented = false;
 
             continue;
@@ -181,85 +169,63 @@ struct lineArr readAsmFile(const char * const fileName) {
             continue;
         }
 
-        if (!isgraph(c)) {
-            if (instructionRead) {
-                if (strLen != 0 && linep->args[strLen - 1] != ' ') {
-                    if (strLen == strMalloced) {
-                        linep->args = expandDynamicArr(linep->args, &strMalloced, sizeof *linep->args);
-                    }
+        // If it's not a graphical character, and the token isn't ending in "LO " or "HI "
+        if (!isgraph(c) && !(c == ' ' && tokenp && (strncmp(*tokenp + strLen - 2, "LO", 2) == 0 || strncmp(*tokenp + strLen - 2, "HI", 2) == 0))) {
+            // End the current token
 
-                    linep->args[strLen] = ' ';
-                    strLen++;
-                }
-            } else if (linep) {
-                linep->instruction = realloc(linep->instruction, strLen + 1);
-                if (!linep->instruction) {
+            if (tokenp) {
+                *tokenp = realloc(*tokenp, strLen + 1);
+                if (!*tokenp) {
                     printf("Crashed due to realloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
-
-                linep->instruction[strLen] = '\0';
-
-                strMalloced = 1;
-                strLen = 0;
-                instructionRead = true;
-                linep->args = malloc(1);
-                if (!linep->args) {
-                    printf("Crashed due to malloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                (*tokenp)[strLen] = '\0';
             }
+
+            tokenp = NULL;
 
             continue;
         }
 
         // Add character
 
-        if (linesMalloced == 0) {
-            // This is the first line, initiate the array
-            linesMalloced = 1;
-            lines.arr = malloc(sizeof *lines.arr);
-            if (!lines.arr) {
-                printf("Crashed due to malloc() fail\n");
-                exit(EXIT_FAILURE);
-            }
-        }
-
         if (!linep) {
             // Create a new line
 
-            // Reserve space
             if (lines.len == linesMalloced) {
                 lines.arr = expandDynamicArr(lines.arr, &linesMalloced, sizeof *lines.arr);
             }
 
-            // Create the line
             linep = &(lines.arr[lines.len]);
             lines.len++;
-            strMalloced = 1;
-            strLen = 0;
-            linep->instruction = malloc(1);
-            if (!linep->instruction) {
-                printf("Crashed due to malloc() fail\n");
-                exit(EXIT_FAILURE);
-            }
+
+            tokensMalloced = 0;
+            linep->len = 0;
+            linep->arr = expandDynamicArr(NULL, &tokensMalloced, sizeof *linep->arr);
         }
 
-        // Reserve space
-        if (strLen == strMalloced) {
-            if (instructionRead) {
-                linep->args = expandDynamicArr(linep->args, &strMalloced, sizeof *linep->args);
-            } else {
-                linep->instruction = expandDynamicArr(linep->instruction, &strMalloced, sizeof *linep->instruction);
+        if (!tokenp) {
+            // Create a new token
+
+            if (linep->len == tokensMalloced) {
+                linep->arr = expandDynamicArr(linep->arr, &tokensMalloced, sizeof *linep->arr);
             }
+
+            tokenp = &(linep->arr[linep->len]);
+            linep->len++;
+
+            strMalloced = 0;
+            strLen = 0;
+            *tokenp = expandDynamicArr(NULL, &strMalloced, sizeof **tokenp);
         }
 
         // Add the character
-        if (instructionRead) {
-            linep->args[strLen] = c;
-        } else {
-            linep->instruction[strLen] = c;
+
+        if (strLen == strMalloced) {
+            *tokenp = expandDynamicArr(*tokenp, &strMalloced, sizeof **tokenp);
         }
+
+        (*tokenp)[strLen] = (char)c;
         strLen++;
     }
 }
@@ -270,9 +236,9 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
     size_t unknownValueArgsMalloced = 0;
 
     for (size_t i = 0; i < lines.len; i++) {
-        const struct line line = lines.arr[i];
+        const struct tokenArr line = lines.arr[i];
 
-        const enum instructions instruction = identifyInstruction(line.instruction);
+        const enum instructions instruction = identifyInstruction(line.arr[0]);
 
         if (is6502Instruction(instruction)) {
             if (!started) {
@@ -283,11 +249,14 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
             }
 
             struct arg arg;
-            if (strcmp(line.args, "") == 0) {
+            if (line.len == 1) {
                 arg.addressingMode = implied;
                 arg.valueKnown = true;
+            } else if (line.len == 2) {
+                arg = parseArgument(line.arr[1], index, constants);
             } else {
-                arg = parseArgument(line.args, index, constants);
+                printf("Expected 1-2 tokens in instruction, got %lld\n", line.len);
+                exit(EXIT_FAILURE);
             }
 
             // Absolute and relative appear the same in assembly
@@ -344,13 +313,13 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 case label:
                 // Set the address of the label
                 // Don't have to check if the label exists as this is its definition, it would have been read in step 2
-                const size_t instructionLen = strlen(line.instruction);
+                const size_t instructionLen = strlen(line.arr[0]);
                 char * const labelName = malloc(instructionLen);
                 if (!labelName) {
                     printf("Crashed due to malloc() fail\n");
                     exit(EXIT_FAILURE);
                 }
-                strncpy(labelName, line.instruction, instructionLen - 1);
+                strncpy(labelName, line.arr[0], instructionLen - 1);
                 labelName[instructionLen - 1] = '\0';
                 for (size_t j = 0; j < constants.len; j++) {
                     if (strcmp(labelName, constants.arr[j].name) == 0) {
@@ -363,20 +332,26 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 break;
 
                 case org:
-                index = parseNumber(line.args).value;
+                if (line.len != 2) {
+                    printf("Expected 2 tokens in .ORG instruction, got %lld\n", line.len);
+                    exit(EXIT_FAILURE);
+                }
+                index = parseNumber(line.arr[1]).value;
                 break;
 
                 case byte:
                 case word:
-                size_t offset = 0;
-                while (true) {
-                    const size_t expressionLen = findExpressionLen(line.args + offset);
+                if (line.len == 1) {
+                    printf(".BYTE and .WORD expect at least 2 tokens, received %lld\n", line.len);
+                    exit(EXIT_FAILURE);
+                }
 
-                    const struct expressionValue num = parseExpression(line.args + offset, expressionLen, index, constants);
+                for (size_t j = 1; j < line.len; j++) {
+                    const struct expressionValue num = parseExpression(line.arr[j], strlen(line.arr[j]), index, constants);
                     if (num.valueKnown) {
                         if (instruction == byte) {
                             if (num.twoBytes) {
-                                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
+                                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.arr[j]);
                                 exit(EXIT_FAILURE);
                             }
                             bin[index] = (uint8_t)num.value;
@@ -393,7 +368,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         }
                         unknownValueArgs->arr[unknownValueArgs->len].index = index;
                         unknownValueArgs->arr[unknownValueArgs->len].lineIndex = i;
-                        unknownValueArgs->arr[unknownValueArgs->len].offset = offset;
+                        unknownValueArgs->arr[unknownValueArgs->len].offset = j;
                         unknownValueArgs->len++;
 
                         if (instruction == byte) {
@@ -401,17 +376,6 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                         } else {
                             index += 2;
                         }
-                    }
-
-                    offset += expressionLen;
-                    if (line.args[offset] == ' ') {
-                        offset++;
-                        continue;
-                    } else if (line.args[offset] == '\0') {
-                        break;
-                    } else {
-                        printf("Unexpected character '%c' in parsed arguments: %s\n", line.args[offset], line.args);
-                        exit(EXIT_FAILURE);
                     }
                 }
                 break;
@@ -432,18 +396,14 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
 
 void resolveLabels(const struct lineArr lines, const struct constantArr constants, const struct unknownValueArgArr unknownValueArgs, uint8_t * const bin) {
     for (size_t i = 0; i < unknownValueArgs.len; i++) {
-        const struct line line = lines.arr[unknownValueArgs.arr[i].lineIndex];
+        const struct tokenArr line = lines.arr[unknownValueArgs.arr[i].lineIndex];
         uint16_t index = unknownValueArgs.arr[i].index;
 
-        const enum instructions instruction = identifyInstruction(line.instruction);
+        const enum instructions instruction = identifyInstruction(line.arr[0]);
 
         if (is6502Instruction(instruction)) {
-            struct arg arg;
-            if (strcmp(line.args, "") == 0) {
-                arg.addressingMode = implied;
-            } else {
-                arg = parseArgument(line.args, index, constants);
-            }
+            // It must have an argument
+            struct arg arg = parseArgument(line.arr[1], index, constants);
 
             // Absolute and relative appear the same in assembly
             // Branch instructions use relative and everything else uses absolute
@@ -471,11 +431,10 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             punchInstruction(instruction, arg, bin, &index);
         } else if (instruction == byte || instruction == word) {
             const size_t offset = unknownValueArgs.arr[i].offset;
-            const size_t expressionLen = findExpressionLen(line.args + offset);
 
-            const struct expressionValue num = parseExpression(line.args + offset, expressionLen, index, constants);
+            const struct expressionValue num = parseExpression(line.arr[offset], strlen(line.arr[offset]), index, constants);
             if (instruction == byte && num.twoBytes) {
-                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.args);
+                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.arr[offset]);
                 exit(EXIT_FAILURE);
             }
             bin[index] = (uint8_t)(num.value & 0xff);
@@ -489,20 +448,6 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             exit(EXIT_FAILURE);
         }
     }
-}
-
-size_t findExpressionLen(const char * const expression) {
-    size_t len = 0;
-    while (true) {
-        if (strncmp("LO ", expression + len, 3) == 0 || strncmp("HI ", expression + len, 3) == 0) {
-            len += 3;
-        } else if (expression[len] == ' ' || expression[len] == '\0') {
-            break;
-        } else {
-            len++;
-        }
-    }
-    return len;
 }
 
 void* expandDynamicArr(void* arr, size_t * const malloced, const size_t elemSize) {

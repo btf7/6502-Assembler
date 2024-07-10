@@ -11,14 +11,13 @@ struct constantArr parseConstants(const struct lineArr lines) {
     size_t constantsMalloced = 0;
 
     for (size_t i = 0; i < lines.len; i++) {
-        const struct line line = lines.arr[i];
-        const enum instructions instructionType = identifyInstruction(line.instruction);
+        const struct tokenArr line = lines.arr[i];
+        const enum instructions instructionType = identifyInstruction(line.arr[0]);
 
         if (instructionType != constant && instructionType != label) {
             continue;
         }
 
-        // Reserve space
         if (constants.len == constantsMalloced) {
             constants.arr = expandDynamicArr(constants.arr, &constantsMalloced, sizeof *constants.arr);
         }
@@ -27,75 +26,55 @@ struct constantArr parseConstants(const struct lineArr lines) {
         constants.len++;
 
         if (instructionType == constant) {
-            constantp->valueKnown = true;
-
-            if (strncmp("BYTE ", line.args, 5) == 0) {
-                constantp->twoBytes = false;
-            } else if (strncmp("WORD ", line.args, 5) == 0) {
-                constantp->twoBytes = true;
-            } else {
-                printf("Must specify constant size with either BYTE or WORD: .DEF %s\n", line.args);
+            if (line.len != 4) {
+                printf("Expected 4 tokens in constant definition, got %lld\n", line.len);
                 exit(EXIT_FAILURE);
             }
 
-            size_t offset = 5;
-            size_t nameLen = 0;
-            size_t nameMalloced = 0;
-            constantp->name = NULL;
-            while (true) {
-                const char c = line.args[offset];
-                offset++;
+            constantp->valueKnown = true;
 
-                if (c == '\0') {
-                    printf("Constant defined with no value: .DEF %s\n", line.args);
-                    exit(EXIT_FAILURE);
-                }
-
-                if (c == ' ') {
-                    if (nameLen == 0) {
-                        printf("Constant defined with no name: .DEF %s\n", line.args);
-                        exit(EXIT_FAILURE);
-                    }
-                    constantp->name = realloc(constantp->name, nameLen + 1);
-                    if (!constantp->name) {
-                        printf("Crashed due to realloc() fail\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    constantp->name[nameLen] = '\0';
-                    if (strcmp("LO", constantp->name) == 0) {
-                        printf("LO is an invalid constant name");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (strcmp("HI", constantp->name) == 0) {
-                        printf("HI is an invalid constant name");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (strcmp("A", constantp->name) == 0) {
-                        printf("A is an invalid constant name");
-                        exit(EXIT_FAILURE);
-                    }
-                    break;
-                }
-
-                if (!isalpha(c)) {
-                    printf("Constant names must be alphabetical: .DEF %s\n", line.args);
-                    exit(EXIT_FAILURE);
-                }
-
-                // Reserve space
-                if (nameLen == nameMalloced) {
-                    constantp->name = expandDynamicArr(constantp->name, &nameMalloced, sizeof *constantp->name);
-                }
-
-                constantp->name[nameLen] = c;
-                nameLen++;
+            if (strcmp("BYTE", line.arr[1]) == 0) {
+                constantp->twoBytes = false;
+            } else if (strcmp("WORD", line.arr[1]) == 0) {
+                constantp->twoBytes = true;
+            } else {
+                printf("Must specify constant size with either BYTE or WORD: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
+                exit(EXIT_FAILURE);
             }
 
+            for (size_t j = 0; j < strlen(line.arr[2]); j++) {
+                if (!isalpha(line.arr[2][j])) {
+                    printf("Constant names must be alphabetical: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            if (strcmp("LO", line.arr[2]) == 0) {
+                printf("LO is an invalid constant name\n");
+                exit(EXIT_FAILURE);
+            }
+            if (strcmp("HI", line.arr[2]) == 0) {
+                printf("HI is an invalid constant name\n");
+                exit(EXIT_FAILURE);
+            }
+            if (strcmp("A", line.arr[2]) == 0) {
+                printf("A is an invalid constant name\n");
+                exit(EXIT_FAILURE);
+            }
+
+            constantp->name = malloc(strlen(line.arr[2]) + 1);
+            if (!constantp->name) {
+                printf("Crashed due to malloc() fail\n");
+                exit(EXIT_FAILURE);
+            }
+            strcpy(constantp->name, line.arr[2]);
+            constantp->name[strlen(line.arr[2])] = '\0';
+
             // Pass 0 for index so it's effectively ignored
-            const struct expressionValue num = parseExpression(line.args + offset, strlen(line.args) - offset, 0, constants);
+            const struct expressionValue num = parseExpression(line.arr[3], strlen(line.arr[3]), 0, constants);
 
             if (!num.valueKnown) {
-                printf("Constants cannot be defined by labels: .DEF %s\n", line.args);
+                printf("Constants cannot be defined by labels: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
                 exit(EXIT_FAILURE);
             }
 
@@ -105,51 +84,43 @@ struct constantArr parseConstants(const struct lineArr lines) {
                 constantp->value = num.value & 0xff;
             }
         } else {
+            if (line.len != 1) {
+                printf("Expected 1 token in label definition, got %lld\n", line.len);
+                exit(EXIT_FAILURE);
+            }
+
             // Note that label values will be set when found in step 3
             constantp->valueKnown = false;
             constantp->twoBytes = true;
 
-            size_t nameLen = 0;
-            size_t nameMalloced = 0;
-            constantp->name = NULL;
-            while (true) {
-                const char c = line.instruction[nameLen];
-
-                if (c == ':') {
-                    constantp->name = realloc(constantp->name, nameLen + 1);
-                    if (!constantp->name) {
-                        printf("Crashed due to realloc() fail\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    constantp->name[nameLen] = '\0';
-                    if (strcmp("LO", constantp->name) == 0) {
-                        printf("LO is an invalid label name");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (strcmp("HI", constantp->name) == 0) {
-                        printf("HI is an invalid label name");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (strcmp("A", constantp->name) == 0) {
-                        printf("A is an invalid label name");
-                        exit(EXIT_FAILURE);
-                    }
-                    break;
-                }
-
-                if (!isalpha(c)) {
-                    printf("Label names must be alphabetical: %s\n", line.instruction);
+            for (size_t j = 0; j < strlen(line.arr[0]) - 1; j++) {
+                if (!isalpha(line.arr[0][j])) {
+                    printf("Label names must be alphabetical: %s\n", line.arr[0]);
                     exit(EXIT_FAILURE);
                 }
-
-                // Reserve space
-                if (nameLen == nameMalloced) {
-                    constantp->name = expandDynamicArr(constantp->name, &nameMalloced, sizeof *constantp->name);
-                }
-
-                constantp->name[nameLen] = c;
-                nameLen++;
             }
+
+            if (strcmp("LO:", line.arr[0]) == 0) {
+                printf("LO is an invalid label name\n");
+                exit(EXIT_FAILURE);
+            }
+            if (strcmp("HI:", line.arr[0]) == 0) {
+                printf("HI is an invalid label name\n");
+                exit(EXIT_FAILURE);
+            }
+            if (strcmp("A:", line.arr[0]) == 0) {
+                printf("A is an invalid label name\n");
+                exit(EXIT_FAILURE);
+            }
+
+            const size_t nameLen = strlen(line.arr[0]); // Added to remove GCC warning -Wstringop-trunctation
+            constantp->name = malloc(nameLen);
+            if (!constantp->name) {
+                printf("Crashed due to malloc() fail\n");
+                exit(EXIT_FAILURE);
+            }
+            strncpy(constantp->name, line.arr[0], nameLen - 1);
+            constantp->name[nameLen - 1] = '\0';
         }
     }
 

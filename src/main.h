@@ -11,14 +11,14 @@ enum instructions {label, constant, byte, word, org,
 // Note that relative addressing in assembly is identical to absolute, plus it's always the only option so it can be detected from the instruction
 enum argAddressingMode {accumulator, implied, immediate, zeroPage, zeroPageX, zeroPageY, relative, absolute, absoluteX, absoluteY, indirect, indirectX, indirectY};
 
-struct line {
-    char* instruction;
-    char* args; // All whitespace sections should be replaced with a single space
+struct tokenArr {
+    size_t len;
+    char** arr;
 };
 
 struct lineArr {
     size_t len;
-    struct line* arr;
+    struct tokenArr* arr;
 };
 
 struct numberValue {
@@ -65,7 +65,6 @@ struct unknownValueArgArr {
 struct lineArr readAsmFile(const char* fileName);
 void assemble(struct lineArr lines, struct constantArr constants, uint8_t* bin, struct unknownValueArgArr* unknownValueArgs);
 void resolveLabels(struct lineArr lines, struct constantArr constants, struct unknownValueArgArr unknownValueArgs, uint8_t* bin);
-size_t findExpressionLen(const char* expression);
 void* expandDynamicArr(void* arr, size_t* malloced, size_t elemSize);
 
 enum instructions identifyInstruction(const char* text);
