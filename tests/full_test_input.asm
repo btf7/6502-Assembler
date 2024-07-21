@@ -828,3 +828,110 @@ lbigsmall:
 .WORD wsmallbig wsmallbigg wbigsmalll wbigsmall
 .ORG $8e20
 .WORD lsmallbig lsmallbigg lbigsmalll lbigsmall
+
+; Test if instructions are correctly read with mix of upper and lower case
+.ORG $8e40
+LDA $12
+LDa $12
+LdA $12
+Lda $12
+lDA $12
+lDa $12
+ldA $12
+lda $12
+.DEF BYTE baa $01
+.DEf BYTe bab $02
+.DeF BYtE bac $03
+.Def BYte bad $04
+.dEF ByTE bae $05
+.dEf ByTe baf $06
+.deF BytE bag $07
+.def Byte bah $08
+.DEF bYTE bai $09
+.DEf bYTe baj $10
+.DeF bYtE bak $11
+.Def bYte bal $12
+.dEF byTE bam $13
+.dEf byTe ban $14
+.deF bytE bao $15
+.def byte bap $16
+.DEF WORD wba $0117
+.DEf WORd wbb $0218
+.DeF WOrD wbc $0319
+.Def WOrd wbd $0420
+.dEF WoRD wbe $0521
+.dEf WoRd wbf $0622
+.deF WorD wbg $0723
+.def Word wbh $0824
+.DEF wORD wbi $0925
+.DEf wORd wbj $1026
+.DeF wOrD wbk $1127
+.Def wOrd wbl $1228
+.dEF woRD wbm $1329
+.dEf woRd wbn $1430
+.deF worD wbo $1531
+.def word wbp $1632
+.ORG $8e60
+.BYTE baa
+.ORg $8e70
+.BYTe bab
+.OrG $8e80
+.BYtE bac
+.Org $8e90
+.BYte bad
+.oRG $8ea0
+.ByTE bae
+.oRg $8eb0
+.ByTe baf
+.orG $8ec0
+.BytE bag
+.org $8ed0
+.Byte bah
+.ORG $8ee0
+.bYTE bai
+.ORg $8ef0
+.bYTe baj
+.OrG $8f00
+.bYtE bak
+.Org $8f10
+.bYte bal
+.oRG $8f20
+.byTE bam
+.oRg $8f30
+.byTe ban
+.orG $8f40
+.bytE bao
+.org $8f50
+.byte bap
+.ORG $8f60
+.WORD wba
+.ORg $8f70
+.WORd wbb
+.OrG $8f80
+.WOrD wbc
+.Org $8f90
+.WOrd wbd
+.oRG $8fa0
+.WoRD wbe
+.oRg $8fb0
+.WoRd wbf
+.orG $8fc0
+.WorD wbg
+.org $8fd0
+.Word wbh
+.ORG $8fe0
+.wORD wbi
+.ORg $8ff0
+.wORd wbj
+.OrG $9000
+.wOrD wbk
+.Org $9010
+.wOrd wbl
+.oRG $9020
+.woRD wbm
+.oRg $9030
+.woRd wbn
+.orG $9040
+.worD wbo
+.org $9050
+.word wbp

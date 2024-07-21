@@ -5,82 +5,102 @@
 #include <string.h>
 
 enum instructions identifyInstruction(const char * const text) {
-    if (text[0] == '.') {
-        // Pseudo_op
-
-        if (strcmp(".ORG", text) == 0) {
-            return org;
-        } else if (strcmp(".BYTE", text) == 0) {
-            return byte;
-        } else if (strcmp(".WORD", text) == 0) {
-            return word;
-        } else if (strcmp(".DEF", text) == 0) {
-            return constant;
-        }
-
-    } else if (text[strlen(text) - 1] == ':') {
+    if (text[strlen(text) - 1] == ':') {
         // Label
 
         return label;
     } else {
-        // Op
+        // Convert to all uppercase
 
-             if (strcmp("ADC", text) == 0) {return adc;}
-        else if (strcmp("AND", text) == 0) {return and;}
-        else if (strcmp("ASL", text) == 0) {return asl;}
-        else if (strcmp("BCC", text) == 0) {return bcc;}
-        else if (strcmp("BCS", text) == 0) {return bcs;}
-        else if (strcmp("BEQ", text) == 0) {return beq;}
-        else if (strcmp("BIT", text) == 0) {return bit;}
-        else if (strcmp("BMI", text) == 0) {return bmi;}
-        else if (strcmp("BNE", text) == 0) {return bne;}
-        else if (strcmp("BPL", text) == 0) {return bpl;}
-        else if (strcmp("BRK", text) == 0) {return brk;}
-        else if (strcmp("BVC", text) == 0) {return bvc;}
-        else if (strcmp("BVS", text) == 0) {return bvs;}
-        else if (strcmp("CLC", text) == 0) {return clc;}
-        else if (strcmp("CLD", text) == 0) {return cld;}
-        else if (strcmp("CLI", text) == 0) {return cli;}
-        else if (strcmp("CLV", text) == 0) {return clv;}
-        else if (strcmp("CMP", text) == 0) {return cmp;}
-        else if (strcmp("CPX", text) == 0) {return cpx;}
-        else if (strcmp("CPY", text) == 0) {return cpy;}
-        else if (strcmp("DEC", text) == 0) {return dec;}
-        else if (strcmp("DEX", text) == 0) {return dex;}
-        else if (strcmp("DEY", text) == 0) {return dey;}
-        else if (strcmp("EOR", text) == 0) {return eor;}
-        else if (strcmp("INC", text) == 0) {return inc;}
-        else if (strcmp("INX", text) == 0) {return inx;}
-        else if (strcmp("INY", text) == 0) {return iny;}
-        else if (strcmp("JMP", text) == 0) {return jmp;}
-        else if (strcmp("JSR", text) == 0) {return jsr;}
-        else if (strcmp("LDA", text) == 0) {return lda;}
-        else if (strcmp("LDX", text) == 0) {return ldx;}
-        else if (strcmp("LDY", text) == 0) {return ldy;}
-        else if (strcmp("LSR", text) == 0) {return lsr;}
-        else if (strcmp("NOP", text) == 0) {return nop;}
-        else if (strcmp("ORA", text) == 0) {return ora;}
-        else if (strcmp("PHA", text) == 0) {return pha;}
-        else if (strcmp("PHP", text) == 0) {return php;}
-        else if (strcmp("PLA", text) == 0) {return pla;}
-        else if (strcmp("PLP", text) == 0) {return plp;}
-        else if (strcmp("ROL", text) == 0) {return rol;}
-        else if (strcmp("ROR", text) == 0) {return ror;}
-        else if (strcmp("RTI", text) == 0) {return rti;}
-        else if (strcmp("RTS", text) == 0) {return rts;}
-        else if (strcmp("SBC", text) == 0) {return sbc;}
-        else if (strcmp("SEC", text) == 0) {return sec;}
-        else if (strcmp("SED", text) == 0) {return sed;}
-        else if (strcmp("SEI", text) == 0) {return sei;}
-        else if (strcmp("STA", text) == 0) {return sta;}
-        else if (strcmp("STX", text) == 0) {return stx;}
-        else if (strcmp("STY", text) == 0) {return sty;}
-        else if (strcmp("TAX", text) == 0) {return tax;}
-        else if (strcmp("TAY", text) == 0) {return tay;}
-        else if (strcmp("TSX", text) == 0) {return tsx;}
-        else if (strcmp("TXA", text) == 0) {return txa;}
-        else if (strcmp("TXS", text) == 0) {return txs;}
-        else if (strcmp("TYA", text) == 0) {return tya;}
+        char* const textUpper = malloc(strlen(text) + 1);
+        if (!textUpper) {
+            printf("Crashed due to malloc() fail\n");
+            exit(EXIT_FAILURE);
+        }
+        strcpyupper(textUpper, text);
+
+        // Default value
+        enum instructions instruction = label;
+
+        if (textUpper[0] == '.') {
+            // Pseudo_op
+
+            if (strcmp(".ORG", textUpper) == 0) {
+                instruction = org;
+            } else if (strcmp(".BYTE", textUpper) == 0) {
+                instruction = byte;
+            } else if (strcmp(".WORD", textUpper) == 0) {
+                instruction = word;
+            } else if (strcmp(".DEF", textUpper) == 0) {
+                instruction = constant;
+            }
+
+        } else {
+            // Op
+
+                 if (strcmp("ADC", textUpper) == 0) {instruction = adc;}
+            else if (strcmp("AND", textUpper) == 0) {instruction = and;}
+            else if (strcmp("ASL", textUpper) == 0) {instruction = asl;}
+            else if (strcmp("BCC", textUpper) == 0) {instruction = bcc;}
+            else if (strcmp("BCS", textUpper) == 0) {instruction = bcs;}
+            else if (strcmp("BEQ", textUpper) == 0) {instruction = beq;}
+            else if (strcmp("BIT", textUpper) == 0) {instruction = bit;}
+            else if (strcmp("BMI", textUpper) == 0) {instruction = bmi;}
+            else if (strcmp("BNE", textUpper) == 0) {instruction = bne;}
+            else if (strcmp("BPL", textUpper) == 0) {instruction = bpl;}
+            else if (strcmp("BRK", textUpper) == 0) {instruction = brk;}
+            else if (strcmp("BVC", textUpper) == 0) {instruction = bvc;}
+            else if (strcmp("BVS", textUpper) == 0) {instruction = bvs;}
+            else if (strcmp("CLC", textUpper) == 0) {instruction = clc;}
+            else if (strcmp("CLD", textUpper) == 0) {instruction = cld;}
+            else if (strcmp("CLI", textUpper) == 0) {instruction = cli;}
+            else if (strcmp("CLV", textUpper) == 0) {instruction = clv;}
+            else if (strcmp("CMP", textUpper) == 0) {instruction = cmp;}
+            else if (strcmp("CPX", textUpper) == 0) {instruction = cpx;}
+            else if (strcmp("CPY", textUpper) == 0) {instruction = cpy;}
+            else if (strcmp("DEC", textUpper) == 0) {instruction = dec;}
+            else if (strcmp("DEX", textUpper) == 0) {instruction = dex;}
+            else if (strcmp("DEY", textUpper) == 0) {instruction = dey;}
+            else if (strcmp("EOR", textUpper) == 0) {instruction = eor;}
+            else if (strcmp("INC", textUpper) == 0) {instruction = inc;}
+            else if (strcmp("INX", textUpper) == 0) {instruction = inx;}
+            else if (strcmp("INY", textUpper) == 0) {instruction = iny;}
+            else if (strcmp("JMP", textUpper) == 0) {instruction = jmp;}
+            else if (strcmp("JSR", textUpper) == 0) {instruction = jsr;}
+            else if (strcmp("LDA", textUpper) == 0) {instruction = lda;}
+            else if (strcmp("LDX", textUpper) == 0) {instruction = ldx;}
+            else if (strcmp("LDY", textUpper) == 0) {instruction = ldy;}
+            else if (strcmp("LSR", textUpper) == 0) {instruction = lsr;}
+            else if (strcmp("NOP", textUpper) == 0) {instruction = nop;}
+            else if (strcmp("ORA", textUpper) == 0) {instruction = ora;}
+            else if (strcmp("PHA", textUpper) == 0) {instruction = pha;}
+            else if (strcmp("PHP", textUpper) == 0) {instruction = php;}
+            else if (strcmp("PLA", textUpper) == 0) {instruction = pla;}
+            else if (strcmp("PLP", textUpper) == 0) {instruction = plp;}
+            else if (strcmp("ROL", textUpper) == 0) {instruction = rol;}
+            else if (strcmp("ROR", textUpper) == 0) {instruction = ror;}
+            else if (strcmp("RTI", textUpper) == 0) {instruction = rti;}
+            else if (strcmp("RTS", textUpper) == 0) {instruction = rts;}
+            else if (strcmp("SBC", textUpper) == 0) {instruction = sbc;}
+            else if (strcmp("SEC", textUpper) == 0) {instruction = sec;}
+            else if (strcmp("SED", textUpper) == 0) {instruction = sed;}
+            else if (strcmp("SEI", textUpper) == 0) {instruction = sei;}
+            else if (strcmp("STA", textUpper) == 0) {instruction = sta;}
+            else if (strcmp("STX", textUpper) == 0) {instruction = stx;}
+            else if (strcmp("STY", textUpper) == 0) {instruction = sty;}
+            else if (strcmp("TAX", textUpper) == 0) {instruction = tax;}
+            else if (strcmp("TAY", textUpper) == 0) {instruction = tay;}
+            else if (strcmp("TSX", textUpper) == 0) {instruction = tsx;}
+            else if (strcmp("TXA", textUpper) == 0) {instruction = txa;}
+            else if (strcmp("TXS", textUpper) == 0) {instruction = txs;}
+            else if (strcmp("TYA", textUpper) == 0) {instruction = tya;}
+        }
+
+        free(textUpper);
+
+        if (instruction != label) {
+            return instruction;
+        }
     }
 
     printf("Invalid token: %s\n", text);

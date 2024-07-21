@@ -38,7 +38,7 @@ Disclaimer: I have little experience in assembly and don't know what standard sy
 
 Comments are added with a `;`. Everything after a `;` in a line is ignored.
 
-Everything (except hex values) is case-sensitive. All instructions and pseudo-ops must be in full caps.
+Constants and labels are case-sensitive. All instructions and pseudo-ops except LO and HI can be uppercase, lowercase, or a mix of both. LO and HI must be uppercase.
 
 Numbers can be inputted in 3 ways: decimal (`123`), hex (`$A1`), or binary (`%10101010`).
 

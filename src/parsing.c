@@ -33,14 +33,24 @@ struct constantArr parseConstants(const struct lineArr lines) {
 
             constantp->valueKnown = true;
 
-            if (strcmp("BYTE", line.arr[1]) == 0) {
+            // Convert line.arr[1] to uppercase
+            char* const arr1Upper = malloc(strlen(line.arr[1]) + 1);
+            if (!arr1Upper) {
+                printf("Crashed due to malloc() fail\n");
+                exit(EXIT_FAILURE);
+            }
+            strcpyupper(arr1Upper, line.arr[1]);
+
+            if (strcmp("BYTE", arr1Upper) == 0) {
                 constantp->twoBytes = false;
-            } else if (strcmp("WORD", line.arr[1]) == 0) {
+            } else if (strcmp("WORD", arr1Upper) == 0) {
                 constantp->twoBytes = true;
             } else {
                 printf("Must specify constant size with either BYTE or WORD: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
                 exit(EXIT_FAILURE);
             }
+
+            free(arr1Upper);
 
             for (size_t j = 0; j < strlen(line.arr[2]); j++) {
                 if (!isalpha(line.arr[2][j])) {

@@ -463,3 +463,21 @@ void* expandDynamicArr(void* arr, size_t * const malloced, const size_t elemSize
     }
     return arr;
 }
+
+// Copy source string into dest, converting to uppercase
+// Assumes dest is big enough to fit
+void strcpyupper(char * const dest, const char * const source) {
+    size_t i = 0;
+    while (true) {
+        const char c = source[i];
+        if (c >= 'a' && c <= 'z') {
+            dest[i] = c + 'A' - 'a';
+        } else {
+            dest[i] = c;
+        }
+        if (c == '\0') {
+            break;
+        }
+        i++;
+    }
+}
