@@ -311,6 +311,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 break;
 
                 case label:
+                ; // Empty statement to silence -Wpendantic warning
                 // Set the address of the label
                 // Don't have to check if the label exists as this is its definition, it would have been read in step 2
                 const size_t instructionLen = strlen(line.arr[0]);
