@@ -3,3 +3,5 @@
 *.asm
 *.6502
 !tests/*
+build
+releasebuild
