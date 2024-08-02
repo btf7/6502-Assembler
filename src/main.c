@@ -91,6 +91,8 @@ struct lineArr readAsmFile(const char * const fileName) {
         exit(EXIT_FAILURE);
     }
 
+    size_t rawLineCount = 1;
+
     struct lineArr lines = {0, NULL};
     size_t linesMalloced = 0;
 
@@ -141,6 +143,7 @@ struct lineArr readAsmFile(const char * const fileName) {
             tokenp = NULL;
             linep = NULL;
             lineCommented = false;
+            rawLineCount++;
 
             continue;
         }
@@ -178,6 +181,7 @@ struct lineArr readAsmFile(const char * const fileName) {
             tokensMalloced = 0;
             linep->len = 0;
             linep->arr = expandDynamicArr(NULL, &tokensMalloced, sizeof *linep->arr);
+            linep->rawLineNumber = rawLineCount;
         }
 
         if (!tokenp) {
@@ -214,7 +218,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
     for (size_t i = 0; i < lines.len; i++) {
         const struct tokenArr line = lines.arr[i];
 
-        const enum instructions instruction = identifyInstruction(line.arr[0]);
+        const enum instructions instruction = identifyInstruction(line.arr[0], line.rawLineNumber);
 
         if (is6502Instruction(instruction)) {
             if (!started) {
@@ -229,9 +233,9 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 arg.addressingMode = implied;
                 arg.valueKnown = true;
             } else if (line.len == 2) {
-                arg = parseArgument(line.arr[1], index, constants);
+                arg = parseArgument(line.arr[1], index, constants, line.rawLineNumber);
             } else {
-                printf("Expected 1-2 tokens in instruction, got %lld\n", line.len);
+                printf("Line %lld: Expected 1-2 tokens in instruction, got %lld\n", line.rawLineNumber, line.len);
                 exit(EXIT_FAILURE);
             }
 
@@ -248,7 +252,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 case bvc:
                 case bvs:
                 if (arg.addressingMode != absolute && arg.addressingMode != zeroPage) {
-                    printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
+                    printf("Line %lld: Invalid addressing mode (%d) for instruction (%d)\n", line.rawLineNumber, arg.addressingMode, instruction);
                     exit(EXIT_FAILURE);
                 }
                 arg.addressingMode = relative;
@@ -259,7 +263,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
             }
 
             if (arg.valueKnown) {
-                punchInstruction(instruction, arg, bin, &index);
+                punchInstruction(instruction, arg, bin, &index, line.rawLineNumber);
             } else {
                 if (unknownValueArgs->len == unknownValueArgsMalloced) {
                     unknownValueArgs->arr = expandDynamicArr(unknownValueArgs->arr, &unknownValueArgsMalloced, sizeof *unknownValueArgs->arr);
@@ -306,25 +310,25 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
 
                 case org:
                 if (line.len != 2) {
-                    printf("Expected 2 tokens in .ORG instruction, got %lld\n", line.len);
+                    printf("Line %lld: Expected 2 tokens in .ORG instruction, got %lld\n", line.rawLineNumber, line.len);
                     exit(EXIT_FAILURE);
                 }
-                index = parseNumber(line.arr[1]).value;
+                index = parseNumber(line.arr[1], line.rawLineNumber).value;
                 break;
 
                 case byte:
                 case word:
                 if (line.len == 1) {
-                    printf(".BYTE and .WORD expect at least 2 tokens, received %lld\n", line.len);
+                    printf("Line %lld: .BYTE and .WORD expect at least 2 tokens, received %lld\n", line.rawLineNumber, line.len);
                     exit(EXIT_FAILURE);
                 }
 
                 for (size_t j = 1; j < line.len; j++) {
-                    const struct expressionValue num = parseExpression(line.arr[j], strlen(line.arr[j]), index, constants);
+                    const struct expressionValue num = parseExpression(line.arr[j], strlen(line.arr[j]), index, constants, line.rawLineNumber);
                     if (num.valueKnown) {
                         if (instruction == byte) {
                             if (num.twoBytes) {
-                                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.arr[j]);
+                                printf("Line %lld: .BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.rawLineNumber, line.arr[j]);
                                 exit(EXIT_FAILURE);
                             }
                             bin[index] = (uint8_t)num.value;
@@ -354,7 +358,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 break;
 
                 default:
-                printf("Failed to recognise instruction %d\n", instruction);
+                printf("Failed to find implementation for pseudo-op %d\n", instruction);
                 exit(EXIT_FAILURE);
             }
         }
@@ -368,11 +372,11 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
         const struct tokenArr line = lines.arr[unknownValueArgs.arr[i].lineIndex];
         uint16_t index = unknownValueArgs.arr[i].index;
 
-        const enum instructions instruction = identifyInstruction(line.arr[0]);
+        const enum instructions instruction = identifyInstruction(line.arr[0], line.rawLineNumber);
 
         if (is6502Instruction(instruction)) {
             // It must have an argument
-            struct arg arg = parseArgument(line.arr[1], index, constants);
+            struct arg arg = parseArgument(line.arr[1], index, constants, line.rawLineNumber);
 
             // Absolute and relative appear the same in assembly
             // Branch instructions use relative and everything else uses absolute
@@ -387,7 +391,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
                 case bvc:
                 case bvs:
                 if (arg.addressingMode != absolute && arg.addressingMode != zeroPage) {
-                    printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
+                    printf("Line %lld: Invalid addressing mode (%d) for instruction (%d)\n", line.rawLineNumber, arg.addressingMode, instruction);
                     exit(EXIT_FAILURE);
                 }
                 arg.addressingMode = relative;
@@ -397,13 +401,13 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
                 break;
             }
 
-            punchInstruction(instruction, arg, bin, &index);
+            punchInstruction(instruction, arg, bin, &index, line.rawLineNumber);
         } else if (instruction == byte || instruction == word) {
             const size_t offset = unknownValueArgs.arr[i].offset;
 
-            const struct expressionValue num = parseExpression(line.arr[offset], strlen(line.arr[offset]), index, constants);
+            const struct expressionValue num = parseExpression(line.arr[offset], strlen(line.arr[offset]), index, constants, line.rawLineNumber);
             if (instruction == byte && num.twoBytes) {
-                printf(".BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.arr[offset]);
+                printf("Line %lld: .BYTE expects 1 byte numbers, received 2 byte number: %s\n", line.rawLineNumber, line.arr[offset]);
                 exit(EXIT_FAILURE);
             }
             bin[index] = (uint8_t)(num.value & 0xff);
@@ -413,7 +417,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
                 bin[index] = (uint8_t)(num.value >> 8);
             }
         } else {
-            printf("Unknown value in unexpected instruction (%d)\n", instruction);
+            printf("Forward-referenced label in unexpected instruction (%d)\n", instruction);
             exit(EXIT_FAILURE);
         }
     }

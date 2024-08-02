@@ -14,6 +14,7 @@ enum argAddressingMode {accumulator, implied, immediate, zeroPage, zeroPageX, ze
 struct tokenArr {
     size_t len;
     char** arr;
+    size_t rawLineNumber;
 };
 
 struct lineArr {
@@ -70,12 +71,12 @@ void* safeRealloc(void* pointer, size_t size);
 void* expandDynamicArr(void* arr, size_t* malloced, size_t elemSize);
 void strcpyupper(char* dest, const char* source);
 
-enum instructions identifyInstruction(const char* text);
-void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp);
+enum instructions identifyInstruction(const char* text, size_t lineNumber);
+void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp, size_t lineNumber);
 bool is6502Instruction(enum instructions instruction);
 
 struct constantArr parseConstants(struct lineArr lines);
 uint8_t hexCharToInt(char c);
-struct numberValue parseNumber(const char* text);
-struct expressionValue parseExpression(const char* text, size_t expressionLen, uint16_t index, struct constantArr constants);
-struct arg parseArgument(const char* text, uint16_t index, struct constantArr constants);
+struct numberValue parseNumber(const char* text, size_t lineNumber);
+struct expressionValue parseExpression(const char* text, size_t expressionLen, uint16_t index, struct constantArr constants, size_t lineNumber);
+struct arg parseArgument(const char* text, uint16_t index, struct constantArr constants, size_t lineNumber);

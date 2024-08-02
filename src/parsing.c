@@ -12,7 +12,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
 
     for (size_t i = 0; i < lines.len; i++) {
         const struct tokenArr line = lines.arr[i];
-        const enum instructions instructionType = identifyInstruction(line.arr[0]);
+        const enum instructions instructionType = identifyInstruction(line.arr[0], line.rawLineNumber);
 
         if (instructionType != constant && instructionType != label) {
             continue;
@@ -27,7 +27,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
 
         if (instructionType == constant) {
             if (line.len != 4) {
-                printf("Expected 4 tokens in constant definition, got %lld\n", line.len);
+                printf("Line %lld: Expected 4 tokens in constant definition, got %lld\n", line.rawLineNumber, line.len);
                 exit(EXIT_FAILURE);
             }
 
@@ -42,7 +42,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
             } else if (strcmp("WORD", arr1Upper) == 0) {
                 constantp->twoBytes = true;
             } else {
-                printf("Must specify constant size with either BYTE or WORD: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
+                printf("Line %lld: Must specify constant size with either BYTE or WORD: .DEF %s %s %s\n", line.rawLineNumber, line.arr[1], line.arr[2], line.arr[3]);
                 exit(EXIT_FAILURE);
             }
 
@@ -50,21 +50,21 @@ struct constantArr parseConstants(const struct lineArr lines) {
 
             for (size_t j = 0; j < strlen(line.arr[2]); j++) {
                 if (!isalpha(line.arr[2][j])) {
-                    printf("Constant names must be alphabetical: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
+                    printf("Line %lld: Constant names must be alphabetical: .DEF %s %s %s\n", line.rawLineNumber, line.arr[1], line.arr[2], line.arr[3]);
                     exit(EXIT_FAILURE);
                 }
             }
 
             if (strcmp("LO", line.arr[2]) == 0) {
-                printf("LO is an invalid constant name\n");
+                printf("Line %lld: LO is an invalid constant name\n", line.rawLineNumber);
                 exit(EXIT_FAILURE);
             }
             if (strcmp("HI", line.arr[2]) == 0) {
-                printf("HI is an invalid constant name\n");
+                printf("Line %lld: HI is an invalid constant name\n", line.rawLineNumber);
                 exit(EXIT_FAILURE);
             }
             if (strcmp("A", line.arr[2]) == 0) {
-                printf("A is an invalid constant name\n");
+                printf("Line %lld: A is an invalid constant name\n", line.rawLineNumber);
                 exit(EXIT_FAILURE);
             }
 
@@ -73,10 +73,10 @@ struct constantArr parseConstants(const struct lineArr lines) {
             constantp->name[strlen(line.arr[2])] = '\0';
 
             // Pass 0 for index so it's effectively ignored
-            const struct expressionValue num = parseExpression(line.arr[3], strlen(line.arr[3]), 0, constants);
+            const struct expressionValue num = parseExpression(line.arr[3], strlen(line.arr[3]), 0, constants, line.rawLineNumber);
 
             if (!num.valueKnown) {
-                printf("Constants cannot be defined by labels: .DEF %s %s %s\n", line.arr[1], line.arr[2], line.arr[3]);
+                printf("Line %lld: Constants cannot be defined by labels: .DEF %s %s %s\n", line.rawLineNumber, line.arr[1], line.arr[2], line.arr[3]);
                 exit(EXIT_FAILURE);
             }
 
@@ -87,7 +87,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
             }
         } else {
             if (line.len != 1) {
-                printf("Expected 1 token in label definition, got %lld\n", line.len);
+                printf("Line %lld: Expected 1 token in label definition, got %lld\n", line.rawLineNumber, line.len);
                 exit(EXIT_FAILURE);
             }
 
@@ -97,21 +97,21 @@ struct constantArr parseConstants(const struct lineArr lines) {
 
             for (size_t j = 0; j < strlen(line.arr[0]) - 1; j++) {
                 if (!isalpha(line.arr[0][j])) {
-                    printf("Label names must be alphabetical: %s\n", line.arr[0]);
+                    printf("Line %lld: Label names must be alphabetical: %s\n", line.rawLineNumber, line.arr[0]);
                     exit(EXIT_FAILURE);
                 }
             }
 
             if (strcmp("LO:", line.arr[0]) == 0) {
-                printf("LO is an invalid label name\n");
+                printf("Line %lld: LO is an invalid label name\n", line.rawLineNumber);
                 exit(EXIT_FAILURE);
             }
             if (strcmp("HI:", line.arr[0]) == 0) {
-                printf("HI is an invalid label name\n");
+                printf("Line %lld: HI is an invalid label name\n", line.rawLineNumber);
                 exit(EXIT_FAILURE);
             }
             if (strcmp("A:", line.arr[0]) == 0) {
-                printf("A is an invalid label name\n");
+                printf("Line %lld: A is an invalid label name\n", line.rawLineNumber);
                 exit(EXIT_FAILURE);
             }
 
@@ -138,7 +138,7 @@ uint8_t hexCharToInt(const char c) {
     }
 }
 
-struct numberValue parseNumber(const char * const text) {
+struct numberValue parseNumber(const char * const text, const size_t lineNumber) {
     int32_t num = 0; // Max number is uint16_t, but go bigger to detect too big numbers
 
     if (isdigit(text[0])) {
@@ -149,7 +149,7 @@ struct numberValue parseNumber(const char * const text) {
             const char c = text[i];
             if (isdigit(c)) {
                 if (i == 0 && c == '0' && isdigit(text[i + 1])) {
-                    printf("Decimal number cannot start with 0: %s\n", text);
+                    printf("Line %lld: Decimal number cannot start with 0: %s\n", lineNumber, text);
                     exit(EXIT_FAILURE);
                 }
                 num *= 10;
@@ -160,7 +160,7 @@ struct numberValue parseNumber(const char * const text) {
         }
 
         if (num > 0xffff) {
-            printf("Number too big: Expected 0 - 65535, got %d: %s\n", num, text);
+            printf("Line %lld: Number too big: Expected 0 - 65535, got %d: %s\n", lineNumber, num, text);
             exit(EXIT_FAILURE);
         }
 
@@ -187,7 +187,7 @@ struct numberValue parseNumber(const char * const text) {
         }
 
         if (i != 3 && i != 5) {
-            printf("Expected 2 or 4 hex digits, got %d: %s\n", i - 1, text);
+            printf("Line %lld: Expected 2 or 4 hex digits, got %d: %s\n", lineNumber, i - 1, text);
             exit(EXIT_FAILURE);
         }
 
@@ -213,7 +213,7 @@ struct numberValue parseNumber(const char * const text) {
         }
 
         if (i != 9 && i != 17) {
-            printf("Expected 8 or 16 binary digits, got %d: %s\n", i - 1, text);
+            printf("Line %lld: Expected 8 or 16 binary digits, got %d: %s\n", lineNumber, i - 1, text);
             exit(EXIT_FAILURE);
         }
 
@@ -223,13 +223,13 @@ struct numberValue parseNumber(const char * const text) {
         return (struct numberValue){num, false, i};
     }
 
-    printf("Failed to parse number: %s\n", text);
+    printf("Line %lld: Failed to parse number: %s\n", lineNumber, text);
     exit(EXIT_FAILURE);
 }
 
-struct expressionValue parseExpression(const char * const text, const size_t expressionLen, const uint16_t index, const struct constantArr constants) {
+struct expressionValue parseExpression(const char * const text, const size_t expressionLen, const uint16_t index, const struct constantArr constants, const size_t lineNumber) {
     if (expressionLen == 0) {
-        printf("No expression to evaluate: %s\n", text);
+        printf("Line %lld: No expression to evaluate: %s\n", lineNumber, text);
         exit(EXIT_FAILURE);
     }
 
@@ -241,7 +241,7 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
 
     while (expression < text + expressionLen) {
         if (sign == 0) {
-            printf("Expression missing '+' or '-': %s\n", text);
+            printf("Line %lld: Expression missing '+' or '-': %s\n", lineNumber, text);
             exit(EXIT_FAILURE);
         }
 
@@ -262,7 +262,7 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
                 constantLen++;
             }
             if (constantLen == 0) {
-                printf("LO or HI used but no constant followed: %s\n", text);
+                printf("Line %lld: LO or HI used but no constant followed: %s\n", lineNumber, text);
                 exit(EXIT_FAILURE);
             }
 
@@ -276,7 +276,7 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
                 }
             }
             if (!constantDefined) {
-                printf("Constant used but not defined: %s\n", expression);
+                printf("Line %lld: Constant used but not defined: %s\n", lineNumber, expression);
                 exit(EXIT_FAILURE);
             }
 
@@ -300,13 +300,13 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
             num.twoBytes = true;
             expression++;
         } else if (isdigit(expression[0]) || expression[0] == '$' || expression[0] == '%') {
-            const struct numberValue otherNum = parseNumber(expression);
+            const struct numberValue otherNum = parseNumber(expression, lineNumber);
 
             num.value += otherNum.value * sign;
             num.twoBytes |= otherNum.twoBytes;
             expression += otherNum.charsRead;
         } else {
-            printf("Unknown character in expression: %s\n", expression);
+            printf("Line %lld: Unknown character in expression: %s\n", lineNumber, expression);
             exit(EXIT_FAILURE);
         }
 
@@ -330,7 +330,7 @@ struct expressionValue parseExpression(const char * const text, const size_t exp
     return num;
 }
 
-struct arg parseArgument(const char * const text, const uint16_t index, const struct constantArr constants) {
+struct arg parseArgument(const char * const text, const uint16_t index, const struct constantArr constants, size_t lineNumber) {
     struct arg arg;
     arg.valueKnown = true;
 
@@ -365,7 +365,7 @@ struct arg parseArgument(const char * const text, const uint16_t index, const st
         } else if (text[textLen - 1] == ')') {
             arg.addressingMode = indirect;
         } else {
-            printf("Couldn't identify addressing mode: %s\n", text);
+            printf("Line %lld: Couldn't identify addressing mode: %s\n", lineNumber, text);
             exit(EXIT_FAILURE);
         }
     } else if (strcmp(",X", text + textLen - 2) == 0 ) {
@@ -378,7 +378,7 @@ struct arg parseArgument(const char * const text, const uint16_t index, const st
         arg.addressingMode = zeroPage;
     }
 
-    const struct expressionValue num = parseExpression(text + expressionStartOffset, expressionLen, index, constants);
+    const struct expressionValue num = parseExpression(text + expressionStartOffset, expressionLen, index, constants, lineNumber);
     arg.value = num.value;
     arg.valueKnown = num.valueKnown;
 

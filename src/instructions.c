@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-enum instructions identifyInstruction(const char * const text) {
+enum instructions identifyInstruction(const char * const text, const size_t lineNumber) {
     if (text[strlen(text) - 1] == ':') {
         // Label
 
@@ -99,11 +99,11 @@ enum instructions identifyInstruction(const char * const text) {
         }
     }
 
-    printf("Invalid token: %s\n", text);
+    printf("Line %lld: Invalid token: %s\n", lineNumber, text);
     exit(EXIT_FAILURE);
 }
 
-void punchInstruction(const enum instructions instruction, const struct arg arg, uint8_t * const bin, uint16_t * const indexp) {
+void punchInstruction(const enum instructions instruction, const struct arg arg, uint8_t * const bin, uint16_t * const indexp, const size_t lineNumber) {
     uint8_t opcodes[61][13];
     memset(opcodes, 0xff, sizeof opcodes); // 0xff isn't an valid opcode, use it to mark an invalid addressing mode
 
@@ -315,7 +315,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
     opcodes[tya][implied]     = 0x98;
 
     if (opcodes[instruction][arg.addressingMode] == 0xff) {
-        printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
+        printf("Line %lld: Invalid addressing mode (%d) for instruction (%d)\n", lineNumber, arg.addressingMode, instruction);
         exit(EXIT_FAILURE);
     }
 
@@ -342,7 +342,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
         (*indexp)++;
         const int32_t dist = arg.value - *indexp;
         if (dist < -126 || dist > 129) {
-            printf("Branch distance too far: Must be -126 to +129, given %d: Branch from 0x%x to 0x%x\n", dist, *indexp, arg.value);
+            printf("Line %lld: Branch distance too far: Must be -126 to +129, given %d: Branch from 0x%x to 0x%x\n", lineNumber, dist, *indexp, arg.value);
             exit(EXIT_FAILURE);
         }
         bin[*indexp - 1] = (int8_t)dist;
