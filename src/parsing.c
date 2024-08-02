@@ -122,11 +122,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
         }
     }
 
-    constants.arr = realloc(constants.arr, constants.len * sizeof *constants.arr);
-    if (!constants.arr) {
-        printf("Crashed due to realloc() fail\n");
-        exit(EXIT_FAILURE);
-    }
+    constants.arr = safeRealloc(constants.arr, constants.len * sizeof *constants.arr);
     return constants;
 }
 

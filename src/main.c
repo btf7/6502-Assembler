@@ -115,22 +115,14 @@ struct lineArr readAsmFile(const char * const fileName) {
             // End the current token
 
             if (tokenp) {
-                *tokenp = realloc(*tokenp, strLen + 1);
-                if (!*tokenp) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                *tokenp = safeRealloc(*tokenp, strLen + 1);
                 (*tokenp)[strLen] = '\0';
             }
 
             // End the current line
 
             if (linep) {
-                linep->arr = realloc(linep->arr, linep->len * sizeof *linep->arr);
-                if (!linep->arr) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                linep->arr = safeRealloc(linep->arr, linep->len * sizeof *linep->arr);
             }
 
             if (c == EOF) {
@@ -141,11 +133,7 @@ struct lineArr readAsmFile(const char * const fileName) {
                     exit(EXIT_FAILURE);
                 }
 
-                lines.arr = realloc(lines.arr, lines.len * sizeof *lines.arr);
-                if (!lines.arr) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                lines.arr = safeRealloc(lines.arr, lines.len * sizeof *lines.arr);
 
                 return lines;
             }
@@ -166,11 +154,7 @@ struct lineArr readAsmFile(const char * const fileName) {
             // End the current token
 
             if (tokenp) {
-                *tokenp = realloc(*tokenp, strLen + 1);
-                if (!*tokenp) {
-                    printf("Crashed due to realloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                *tokenp = safeRealloc(*tokenp, strLen + 1);
                 (*tokenp)[strLen] = '\0';
             }
 
@@ -376,11 +360,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
         }
     }
 
-    unknownValueArgs->arr = realloc(unknownValueArgs->arr, unknownValueArgs->len * sizeof *unknownValueArgs->arr);
-    if (!unknownValueArgs->arr) {
-        printf("Crashed due to realloc() fail\n");
-        exit(EXIT_FAILURE);
-    }
+    unknownValueArgs->arr = safeRealloc(unknownValueArgs->arr, unknownValueArgs->len * sizeof *unknownValueArgs->arr);
 }
 
 void resolveLabels(const struct lineArr lines, const struct constantArr constants, const struct unknownValueArgArr unknownValueArgs, uint8_t * const bin) {
@@ -448,17 +428,22 @@ void* safeMalloc(const size_t size) {
     return pointer;
 }
 
+void* safeRealloc(void* pointer, const size_t size) {
+    pointer = realloc(pointer, size);
+    if (!pointer) {
+        printf("Crashed due to realloc(%lld) fail\n", size);
+        exit(EXIT_FAILURE);
+    }
+    return pointer;
+}
+
 void* expandDynamicArr(void* arr, size_t * const malloced, const size_t elemSize) {
     if (*malloced == 0) {
         *malloced = 1;
     } else {
         *malloced *= 2;
     }
-    arr = realloc(arr, *malloced * elemSize);
-    if (!arr) {
-        printf("Crashed due to realloc() fail\n");
-        exit(EXIT_FAILURE);
-    }
+    arr = safeRealloc(arr, *malloced * elemSize);
     return arr;
 }
 
