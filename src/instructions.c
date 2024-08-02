@@ -34,62 +34,12 @@ enum instructions identifyInstruction(const char * const text, const size_t line
         } else {
             // Op
 
-                 if (strcmp("ADC", textUpper) == 0) {instruction = adc;}
-            else if (strcmp("AND", textUpper) == 0) {instruction = and;}
-            else if (strcmp("ASL", textUpper) == 0) {instruction = asl;}
-            else if (strcmp("BCC", textUpper) == 0) {instruction = bcc;}
-            else if (strcmp("BCS", textUpper) == 0) {instruction = bcs;}
-            else if (strcmp("BEQ", textUpper) == 0) {instruction = beq;}
-            else if (strcmp("BIT", textUpper) == 0) {instruction = bit;}
-            else if (strcmp("BMI", textUpper) == 0) {instruction = bmi;}
-            else if (strcmp("BNE", textUpper) == 0) {instruction = bne;}
-            else if (strcmp("BPL", textUpper) == 0) {instruction = bpl;}
-            else if (strcmp("BRK", textUpper) == 0) {instruction = brk;}
-            else if (strcmp("BVC", textUpper) == 0) {instruction = bvc;}
-            else if (strcmp("BVS", textUpper) == 0) {instruction = bvs;}
-            else if (strcmp("CLC", textUpper) == 0) {instruction = clc;}
-            else if (strcmp("CLD", textUpper) == 0) {instruction = cld;}
-            else if (strcmp("CLI", textUpper) == 0) {instruction = cli;}
-            else if (strcmp("CLV", textUpper) == 0) {instruction = clv;}
-            else if (strcmp("CMP", textUpper) == 0) {instruction = cmp;}
-            else if (strcmp("CPX", textUpper) == 0) {instruction = cpx;}
-            else if (strcmp("CPY", textUpper) == 0) {instruction = cpy;}
-            else if (strcmp("DEC", textUpper) == 0) {instruction = dec;}
-            else if (strcmp("DEX", textUpper) == 0) {instruction = dex;}
-            else if (strcmp("DEY", textUpper) == 0) {instruction = dey;}
-            else if (strcmp("EOR", textUpper) == 0) {instruction = eor;}
-            else if (strcmp("INC", textUpper) == 0) {instruction = inc;}
-            else if (strcmp("INX", textUpper) == 0) {instruction = inx;}
-            else if (strcmp("INY", textUpper) == 0) {instruction = iny;}
-            else if (strcmp("JMP", textUpper) == 0) {instruction = jmp;}
-            else if (strcmp("JSR", textUpper) == 0) {instruction = jsr;}
-            else if (strcmp("LDA", textUpper) == 0) {instruction = lda;}
-            else if (strcmp("LDX", textUpper) == 0) {instruction = ldx;}
-            else if (strcmp("LDY", textUpper) == 0) {instruction = ldy;}
-            else if (strcmp("LSR", textUpper) == 0) {instruction = lsr;}
-            else if (strcmp("NOP", textUpper) == 0) {instruction = nop;}
-            else if (strcmp("ORA", textUpper) == 0) {instruction = ora;}
-            else if (strcmp("PHA", textUpper) == 0) {instruction = pha;}
-            else if (strcmp("PHP", textUpper) == 0) {instruction = php;}
-            else if (strcmp("PLA", textUpper) == 0) {instruction = pla;}
-            else if (strcmp("PLP", textUpper) == 0) {instruction = plp;}
-            else if (strcmp("ROL", textUpper) == 0) {instruction = rol;}
-            else if (strcmp("ROR", textUpper) == 0) {instruction = ror;}
-            else if (strcmp("RTI", textUpper) == 0) {instruction = rti;}
-            else if (strcmp("RTS", textUpper) == 0) {instruction = rts;}
-            else if (strcmp("SBC", textUpper) == 0) {instruction = sbc;}
-            else if (strcmp("SEC", textUpper) == 0) {instruction = sec;}
-            else if (strcmp("SED", textUpper) == 0) {instruction = sed;}
-            else if (strcmp("SEI", textUpper) == 0) {instruction = sei;}
-            else if (strcmp("STA", textUpper) == 0) {instruction = sta;}
-            else if (strcmp("STX", textUpper) == 0) {instruction = stx;}
-            else if (strcmp("STY", textUpper) == 0) {instruction = sty;}
-            else if (strcmp("TAX", textUpper) == 0) {instruction = tax;}
-            else if (strcmp("TAY", textUpper) == 0) {instruction = tay;}
-            else if (strcmp("TSX", textUpper) == 0) {instruction = tsx;}
-            else if (strcmp("TXA", textUpper) == 0) {instruction = txa;}
-            else if (strcmp("TXS", textUpper) == 0) {instruction = txs;}
-            else if (strcmp("TYA", textUpper) == 0) {instruction = tya;}
+            for (enum instructions instructionType = 0; instructionType <= tya; instructionType++) {
+                if (!strcmp(instructionNames[instructionType], textUpper)) {
+                    instruction = instructionType;
+                    break;
+                }
+            }
         }
 
         free(textUpper);
