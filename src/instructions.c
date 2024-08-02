@@ -318,7 +318,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
         printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
         exit(EXIT_FAILURE);
     }
-    
+
     bin[*indexp] = opcodes[instruction][arg.addressingMode];
     (*indexp)++;
 

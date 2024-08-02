@@ -176,7 +176,7 @@ struct numberValue parseNumber(const char * const text) {
         uint8_t i;
         for (i = 1; i < 6; i++) {
             const uint8_t new = hexCharToInt(text[i]);
-            
+
             if (new == 255) {
                 num = num >> 4;
                 break;

@@ -127,7 +127,7 @@ struct lineArr readAsmFile(const char * const fileName) {
 
             if (c == EOF) {
                 fclose(file);
-                
+
                 if (linesMalloced == 0) {
                     printf("Given file has no assembly contents: %s\n", fileName);
                     exit(EXIT_FAILURE);
