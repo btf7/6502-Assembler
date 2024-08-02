@@ -277,10 +277,17 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
         case implied:
         break;
 
+        case indirect:
+        // Print warning if indirect vector ends in xxFF
+        // as there is a bug in the 6502 where the high byte
+        // will be read wrong in this case
+        if ((arg.value & 0xff) == 0xff) {
+            printf("Line %lld: Warning: Indirect vector (0x%.4x) falls on page boundary\n", lineNumber, arg.value);
+        }
+        // Fall through
         case absolute:
         case absoluteX:
         case absoluteY:
-        case indirect:
         // Value should be punched in little endian
         bin[*indexp] = (uint8_t)(arg.value & 0xff);
         (*indexp)++;

@@ -935,3 +935,31 @@ lda $12
 .worD wbo
 .org $9050
 .word wbp
+
+; Test indirect vector falling on page boundary warning
+
+.org $9060
+jmp ($00)
+jmp ($0f)
+jmp ($f0)
+jmp ($ff)
+.org $9080
+jmp ($0000)
+jmp ($000f)
+jmp ($00f0)
+jmp ($00ff)
+.org $90a0
+jmp ($0f00)
+jmp ($0f0f)
+jmp ($0ff0)
+jmp ($0fff)
+.org $90c0
+jmp ($f000)
+jmp ($f00f)
+jmp ($f0f0)
+jmp ($f0ff)
+.org $90e0
+jmp ($ff00)
+jmp ($ff0f)
+jmp ($fff0)
+jmp ($ffff)
