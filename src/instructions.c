@@ -12,11 +12,7 @@ enum instructions identifyInstruction(const char * const text) {
     } else {
         // Convert to all uppercase
 
-        char* const textUpper = malloc(strlen(text) + 1);
-        if (!textUpper) {
-            printf("Crashed due to malloc() fail\n");
-            exit(EXIT_FAILURE);
-        }
+        char * const textUpper = safeMalloc(strlen(text) + 1);
         strcpyupper(textUpper, text);
 
         // Default value

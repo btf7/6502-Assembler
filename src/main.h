@@ -65,6 +65,7 @@ struct unknownValueArgArr {
 struct lineArr readAsmFile(const char* fileName);
 void assemble(struct lineArr lines, struct constantArr constants, uint8_t* bin, struct unknownValueArgArr* unknownValueArgs);
 void resolveLabels(struct lineArr lines, struct constantArr constants, struct unknownValueArgArr unknownValueArgs, uint8_t* bin);
+void* safeMalloc(size_t size);
 void* expandDynamicArr(void* arr, size_t* malloced, size_t elemSize);
 void strcpyupper(char* dest, const char* source);
 

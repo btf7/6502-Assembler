@@ -34,11 +34,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
             constantp->valueKnown = true;
 
             // Convert line.arr[1] to uppercase
-            char* const arr1Upper = malloc(strlen(line.arr[1]) + 1);
-            if (!arr1Upper) {
-                printf("Crashed due to malloc() fail\n");
-                exit(EXIT_FAILURE);
-            }
+            char * const arr1Upper = safeMalloc(strlen(line.arr[1]) + 1);
             strcpyupper(arr1Upper, line.arr[1]);
 
             if (strcmp("BYTE", arr1Upper) == 0) {
@@ -72,11 +68,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
                 exit(EXIT_FAILURE);
             }
 
-            constantp->name = malloc(strlen(line.arr[2]) + 1);
-            if (!constantp->name) {
-                printf("Crashed due to malloc() fail\n");
-                exit(EXIT_FAILURE);
-            }
+            constantp->name = safeMalloc(strlen(line.arr[2]) + 1);
             strcpy(constantp->name, line.arr[2]);
             constantp->name[strlen(line.arr[2])] = '\0';
 
@@ -124,11 +116,7 @@ struct constantArr parseConstants(const struct lineArr lines) {
             }
 
             const size_t nameLen = strlen(line.arr[0]); // Added to remove GCC warning -Wstringop-trunctation
-            constantp->name = malloc(nameLen);
-            if (!constantp->name) {
-                printf("Crashed due to malloc() fail\n");
-                exit(EXIT_FAILURE);
-            }
+            constantp->name = safeMalloc(nameLen);
             strncpy(constantp->name, line.arr[0], nameLen - 1);
             constantp->name[nameLen - 1] = '\0';
         }

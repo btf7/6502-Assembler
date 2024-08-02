@@ -57,19 +57,11 @@ int main(int argc, char** argv) {
     char* fileName;
     if (argc == 2) {
         // No file name was given
-        fileName = malloc(strlen(argv[1]) + 6);
-        if (!fileName) {
-            printf("Crashed due to malloc() fail\n");
-            exit(EXIT_FAILURE);
-        }
+        fileName = safeMalloc(strlen(argv[1]) + 6);
         strcpy(fileName, argv[1]);
         strcpy(fileName + strlen(argv[1]), ".6502");
     } else {
-        fileName = malloc(strlen(argv[2]) + 1);
-        if (!fileName) {
-            printf("Crashed due to malloc() fail\n");
-            exit(EXIT_FAILURE);
-        }
+        fileName = safeMalloc(strlen(argv[2]) + 1);
         strcpy(fileName, argv[2]);
     }
 
@@ -315,11 +307,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 // Set the address of the label
                 // Don't have to check if the label exists as this is its definition, it would have been read in step 2
                 const size_t instructionLen = strlen(line.arr[0]);
-                char * const labelName = malloc(instructionLen);
-                if (!labelName) {
-                    printf("Crashed due to malloc() fail\n");
-                    exit(EXIT_FAILURE);
-                }
+                char * const labelName = safeMalloc(instructionLen);
                 strncpy(labelName, line.arr[0], instructionLen - 1);
                 labelName[instructionLen - 1] = '\0';
                 for (size_t j = 0; j < constants.len; j++) {
@@ -449,6 +437,15 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
             exit(EXIT_FAILURE);
         }
     }
+}
+
+void* safeMalloc(const size_t size) {
+    void * const pointer = malloc(size);
+    if (!pointer) {
+        printf("Crashed due to malloc(%lld) fail\n", size);
+        exit(EXIT_FAILURE);
+    }
+    return pointer;
 }
 
 void* expandDynamicArr(void* arr, size_t * const malloced, const size_t elemSize) {
