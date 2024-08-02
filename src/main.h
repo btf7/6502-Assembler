@@ -3,13 +3,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-enum instructions {label, constant, byte, word, org,
-                   adc, and, asl, bcc, bcs, beq, bit, bmi, bne, bpl, brk, bvc, bvs, clc,
+enum instructions {adc, and, asl, bcc, bcs, beq, bit, bmi, bne, bpl, brk, bvc, bvs, clc,
                    cld, cli, clv, cmp, cpx, cpy, dec, dex, dey, eor, inc, inx, iny, jmp,
                    jsr, lda, ldx, ldy, lsr, nop, ora, pha, php, pla, plp, rol, ror, rti,
-                   rts, sbc, sec, sed, sei, sta, stx, sty, tax, tay, tsx, txa, txs, tya};
+                   rts, sbc, sec, sed, sei, sta, stx, sty, tax, tay, tsx, txa, txs, tya,
+                   label, constant, byte, word, org};
 // Note that relative addressing in assembly is identical to absolute, plus it's always the only option so it can be detected from the instruction
 enum argAddressingMode {accumulator, implied, immediate, zeroPage, zeroPageX, zeroPageY, relative, absolute, absoluteX, absoluteY, indirect, indirectX, indirectY};
+
+static const char instructionNames[56][4] = {
+    "ADC", "AND", "ASL", "BCC", "BCS", "BEQ", "BIT", "BMI", "BNE", "BPL", "BRK", "BVC", "BVS", "CLC",
+    "CLD", "CLI", "CLV", "CMP", "CPX", "CPY", "DEC", "DEX", "DEY", "EOR", "INC", "INX", "INY", "JMP",
+    "JSR", "LDA", "LDX", "LDY", "LSR", "NOP", "ORA", "PHA", "PHP", "PLA", "PLP", "ROL", "ROR", "RTI",
+    "RTS", "SBC", "SEC", "SED", "SEI", "STA", "STX", "STY", "TAX", "TAY", "TSX", "TXA", "TXS", "TYA"
+};
+
+static const char addressingModeNames[13][12] = {
+    "accumulator", "implied", "immediate", "zero page", "zero page x", "zero page y", "relative", "absolute", "absolute x", "absolute y", "indirect", "indirect x", "indirect y"
+};
 
 struct tokenArr {
     size_t len;
@@ -74,6 +85,7 @@ void strcpyupper(char* dest, const char* source);
 enum instructions identifyInstruction(const char* text, size_t lineNumber);
 void punchInstruction(enum instructions instruction, struct arg arg, uint8_t* bin, uint16_t* indexp, size_t lineNumber);
 bool is6502Instruction(enum instructions instruction);
+char* get6502InstructionName(enum instructions instruction);
 
 struct constantArr parseConstants(struct lineArr lines);
 uint8_t hexCharToInt(char c);

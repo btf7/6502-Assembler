@@ -252,7 +252,7 @@ void assemble(const struct lineArr lines, const struct constantArr constants, ui
                 case bvc:
                 case bvs:
                 if (arg.addressingMode != absolute && arg.addressingMode != zeroPage) {
-                    printf("Line %lld: Invalid addressing mode (%d) for instruction (%d)\n", line.rawLineNumber, arg.addressingMode, instruction);
+                    printf("Line %lld: Invalid addressing mode (%s) for instruction (%s)\n", line.rawLineNumber, addressingModeNames[arg.addressingMode], instructionNames[instruction]);
                     exit(EXIT_FAILURE);
                 }
                 arg.addressingMode = relative;
@@ -391,7 +391,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
                 case bvc:
                 case bvs:
                 if (arg.addressingMode != absolute && arg.addressingMode != zeroPage) {
-                    printf("Line %lld: Invalid addressing mode (%d) for instruction (%d)\n", line.rawLineNumber, arg.addressingMode, instruction);
+                    printf("Line %lld: Invalid addressing mode (%s) for instruction (%s)\n", line.rawLineNumber, addressingModeNames[arg.addressingMode], instructionNames[instruction]);
                     exit(EXIT_FAILURE);
                 }
                 arg.addressingMode = relative;

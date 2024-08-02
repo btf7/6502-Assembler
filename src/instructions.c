@@ -104,7 +104,7 @@ enum instructions identifyInstruction(const char * const text, const size_t line
 }
 
 void punchInstruction(const enum instructions instruction, const struct arg arg, uint8_t * const bin, uint16_t * const indexp, const size_t lineNumber) {
-    uint8_t opcodes[61][13];
+    uint8_t opcodes[56][13];
     memset(opcodes, 0xff, sizeof opcodes); // 0xff isn't an valid opcode, use it to mark an invalid addressing mode
 
     opcodes[adc][immediate]   = 0x69;
@@ -315,7 +315,7 @@ void punchInstruction(const enum instructions instruction, const struct arg arg,
     opcodes[tya][implied]     = 0x98;
 
     if (opcodes[instruction][arg.addressingMode] == 0xff) {
-        printf("Line %lld: Invalid addressing mode (%d) for instruction (%d)\n", lineNumber, arg.addressingMode, instruction);
+        printf("Line %lld: Invalid addressing mode (%s) for instruction (%s)\n", lineNumber, addressingModeNames[arg.addressingMode], instructionNames[instruction]);
         exit(EXIT_FAILURE);
     }
 
