@@ -386,7 +386,7 @@ void resolveLabels(const struct lineArr lines, const struct constantArr constant
                 case bpl:
                 case bvc:
                 case bvs:
-                if (arg.addressingMode != absolute) {
+                if (arg.addressingMode != absolute && arg.addressingMode != zeroPage) {
                     printf("Invalid addressing mode (%d) for instruction (%d)\n", arg.addressingMode, instruction);
                     exit(EXIT_FAILURE);
                 }
